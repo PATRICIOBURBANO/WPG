@@ -1,0 +1,112 @@
+﻿@page
+@model AtsManager.Pages.Compras.CreateCompraModel
+@using System.Globalization
+
+<style>
+    /* Asegurar estilos para mensajes si faltan */
+    .message-box { padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; font-weight: 600; }
+    .success { background-color: #d1fae5; color: #065f46; border-left: 5px solid #10b981; }
+    .error { background-color: #fee2e2; color: #991b1b; border-left: 5px solid #ef4444; }
+</style>
+
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
+        Ingresar Compra Manualmente
+    </h1>
+
+    <div asp-validation-summary="ModelOnly" class="text-sm message-box error"></div>
+
+    @* --- SECCIÓN DE BÚSQUEDA POR CLAVE DE ACCESO --- *@
+        <form method="post" asp-page-handler="BuscarComprobante" class="mb-8 border-2 border-dashed border-indigo-300 p-6 rounded-lg bg-indigo-50">
+            <h2 class="text-lg font-semibold text-indigo-800 mb-4">Autollenado por Clave de Acceso</h2>
+            <div class="flex space-x-4 items-end">
+                <div class="flex-grow">
+                    <label asp-for="AutorizacionInput" class="block text-sm font-medium text-gray-700">Clave de Acceso (49 dígitos)</label>
+                    <input asp-for="AutorizacionInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" maxlength="49" />
+                    <span asp-validation-for="AutorizacionInput" class="text-red-600 text-xs"></span>
+                </div>
+                <button type="submit" class="h-10 px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition">
+                    Buscar y Precargar
+                </button>
+            </div>
+        @* Transferir datos del modelo actual para que no se pierdan si falla la búsqueda *@
+        <input type="hidden" asp-for="RegistroCompra.Anio" />
+        <input type="hidden" asp-for="RegistroCompra.Mes" />
+        <input type="hidden" asp-for="RegistroCompra.IdProveedor" />
+        <input type="hidden" asp-for="RegistroCompra.NumComprobante" />
+        <input type="hidden" asp-for="RegistroCompra.Autorizacion" />
+    </form>
+        @* Añadir aquí todos los campos que NO se precargan pero que tienen valores @*
+
+    
+    @* ---------------------------------------------------- *@
+
+
+    <form method="post" class="space-y-6">
+        @* Los campos precargados ahora son hidden o de solo lectura *@
+        <input type="hidden" asp-for="RegistroCompra.Id" />
+        <input type="hidden" asp-for="RegistroCompra.FechaCreacion" />
+        <input type="hidden" asp-for="RegistroCompra.UsuarioCreacion" />
+        <input type="hidden" asp-for="RegistroCompra.Autorizacion" /> @* Clave de Acceso Completa *@
+        <input type="hidden" asp-for="RegistroCompra.NumComprobante" /> @* Serie + Secuencial *@
+        <input type="hidden" asp-for="RegistroCompra.TipoComprobante" />
+        
+        <div class="bg-indigo-50 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-indigo-800 mb-4">Período y Datos Básicos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label asp-for="RegistroCompra.Anio" class="block text-sm font-medium text-gray-700">Año</label>
+                    <input asp-for="RegistroCompra.Anio" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.Mes" class="block text-sm font-medium text-gray-700">Mes</label>
+                    <input asp-for="RegistroCompra.Mes" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.FechaEmision" class="block text-sm font-medium text-gray-700">Fecha Emisión</label>
+                    <input asp-for="RegistroCompra.FechaEmision" type="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Proveedor y Documento</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div>
+                    <label asp-for="RegistroCompra.IdProveedor" class="block text-sm font-medium text-gray-700">RUC/ID Proveedor</label>
+                    <input asp-for="RegistroCompra.IdProveedor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                    <span class="text-xs text-gray-500">Valor precargado por la clave.</span>
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.NumComprobante" class="block text-sm font-medium text-gray-700">No. Comprobante</label>
+                    <input asp-for="RegistroCompra.NumComprobante" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                </div>
+            </div>
+            <div class="mt-6">
+                <label asp-for="RegistroCompra.RazonSocialProveedor" class="block text-sm font-medium text-gray-700">Razón Social</label>
+                <input asp-for="RegistroCompra.RazonSocialProveedor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
+            </div>
+            
+        </div>
+        
+        <div class="bg-yellow-50 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-yellow-800 mb-4">Bases y Montos (Manual)</h2>
+            <p class="text-sm text-yellow-700 mb-4">Asegúrese de que el **Monto Total** cuadre con las bases y el IVA.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div><label asp-for="RegistroCompra.BaseImponible" class="block text-sm font-medium text-gray-700">Base 12%</label><input asp-for="RegistroCompra.BaseImponible" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required /></div>
+                <div><label asp-for="RegistroCompra.BaseImpGrav" class="block text-sm font-medium text-gray-700">Base 0%</label><input asp-for="RegistroCompra.BaseImpGrav" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required /></div>
+                <div><label asp-for="RegistroCompra.BaseNoGraIva" class="block text-sm font-medium text-gray-700">Base No Objeto</label><input asp-for="RegistroCompra.BaseNoGraIva" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required /></div>
+                
+                <div><label asp-for="RegistroCompra.MontoIva" class="block text-sm font-medium text-gray-700">Monto IVA</label><input asp-for="RegistroCompra.MontoIva" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required /></div>
+                <div><label asp-for="RegistroCompra.MontoIce" class="block text-sm font-medium text-gray-700">Monto ICE</label><input asp-for="RegistroCompra.MontoIce" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required /></div>
+                <div><label asp-for="RegistroCompra.MontoTotal" class="block text-sm font-medium text-gray-700">Monto Total</label><input asp-for="RegistroCompra.MontoTotal" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required /></div>
+            </div>
+        </div>
+
+        <div class="pt-5">
+            <button type="submit" asp-page-handler="Async" class="w-full inline-flex justify-center py-3 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                Guardar Registro de Compra
+            </button>
+        </div>
+    </form>
+</div>

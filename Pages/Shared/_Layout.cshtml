@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ATS Manager</title>
+
+    <!-- Incluye Tailwind CSS (usando CDN para simplicidad) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
+        }
+
+        .main-content {
+            /* Adaptable al 100% del espacio, centrado */
+            min-height: calc(100vh - 64px - 40px);
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra de Navegación (Header) -->
+    <header class="bg-white shadow-md sticky top-0 z-10">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <!-- Logo / Nombre de la App -->
+                    <a asp-page="/Index" class="flex-shrink-0 flex items-center text-xl font-bold text-indigo-600">
+                        ATS Manager
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- Menú de Navegación Principal -->
+                    <a asp-page="/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Inicio</a>
+                    <a asp-page="/Cargas/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Carga Lotes</a>
+                    <a asp-page="/Compras/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Compras (CRUD)</a>
+                    <a asp-page="/Ventas/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Ventas (CRUD)</a>
+                    <a asp-page="/ImportarXML/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Importar XML</a>
+                    <a asp-page="/Reportes/Exportar" class="text-white bg-green-500 hover:bg-green-600 px-3 py-2 rounded-lg text-sm font-medium transition">
+                        Exportar ATS
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Contenido Específico de la Página (Aquí se inyecta el Index.cshtml) -->
+    <div class="main-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- Pie de Página (Footer) -->
+    <footer class="border-t bg-white mt-10">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-500">
+            &copy; @DateTime.Now.Year - ATS Manager. Desarrollado con ASP.NET Core y Razor Pages.
+        </div>
+    </footer>
+
+    <!-- Sección para scripts JS específicos de cada página -->
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

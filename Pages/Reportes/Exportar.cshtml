@@ -1,0 +1,65 @@
+﻿@page
+@model AtsManager.Pages.Reportes.ExportarModel
+@using System.Globalization
+
+<div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
+        Generar y Exportar ATS (XML)
+    </h1>
+    <p class="text-gray-500 mb-8">
+        Seleccione el período fiscal para consolidar todos los registros y generar el archivo XML.
+    </p>
+
+    @* Mostrar mensaje de proceso (éxito o error) *@
+    @if (!string.IsNullOrEmpty(Model.Mensaje))
+    {
+        <div class="message-box @(Model.Mensaje.StartsWith("ERROR") ? "error" : "success") mb-6 p-4 rounded-lg border-l-4 font-semibold @(Model.Mensaje.StartsWith("ERROR") ? "bg-red-100 text-red-800 border-red-500" : "bg-green-100 text-green-800 border-green-500")">
+            @Model.Mensaje
+        </div>
+    }
+
+    <form method="post" asp-page-handler="Exportar" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-lg">
+
+            <div>
+                <label asp-for="Anio" class="block text-sm font-medium text-gray-700">Año Fiscal</label>
+                <select asp-for="Anio" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    @{
+                        var currentYear = DateTime.Now.Year;
+                        for (int i = currentYear - 5; i <= currentYear + 1; i++)
+                        {
+                            <option value="@i">@i</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label asp-for="Mes" class="block text-sm font-medium text-gray-700">Mes Fiscal</label>
+                <select asp-for="Mes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    @for (int i = 1; i <= 12; i++)
+                    {
+                        <option value="@i">@i.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="pt-5">
+            <button type="submit" class="w-full inline-flex justify-center py-3 px-4 border border-transparent shadow-sm text-lg font-bold rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out transform hover:scale-[1.01]">
+                <svg class="h-6 w-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Generar y Descargar Archivo XML
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializa los select con el mes/año actual
+            document.getElementById('Mes').value = @Model.Mes;
+            document.getElementById('Anio').value = @Model.Anio;
+        });
+    </script>
+}

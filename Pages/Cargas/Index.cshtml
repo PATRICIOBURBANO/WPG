@@ -1,0 +1,272 @@
+﻿@page
+@model AtsManager.Pages.Cargas.IndexModel
+@using System.Globalization
+
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    /* Estilos de Tailwind para mensajes de error/éxito */
+    .message-box {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    }
+
+    .success {
+        background-color: #d1fae5;
+        color: #065f46;
+        border-left: 5px solid #10b981;
+    }
+
+    .error {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border-left: 5px solid #ef4444;
+    }
+
+    .warning {
+        background-color: #fffbeb;
+        color: #92400e;
+        border-left: 5px solid #f59e0b;
+    }
+</style>
+
+<div class="min-h-screen p-4 sm:p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-2xl">
+
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
+            Carga Masiva de Anexos Transaccionales (ATS)
+        </h1>
+        <p class="text-gray-500 mb-8">
+            Seleccione el período fiscal y el tipo de anexo para cargar archivos de texto plano (Tab Delimitado).
+        </p>
+
+        @* Mostrar mensaje de proceso (éxito, error o advertencia) *@
+        @if (!string.IsNullOrEmpty(Model.MensajeCarga))
+        {
+            var cssClass = Model.MensajeCarga.Contains("ERROR") || Model.MensajeCarga.Contains("❌") ? "error" :
+            Model.MensajeCarga.Contains("ADVERTENCIA") || Model.MensajeCarga.Contains("⚠️") ? "warning" : "success";
+
+            <div class="message-box @cssClass">
+                @Html.Raw(Model.MensajeCarga)
+            </div>
+        }
+
+        @* Mostrar errores de validación si existen *@
+        @if (Model.ErroresValidacion.Any())
+        {
+            <div class="message-box error">
+                <h4 class="font-bold mb-2">Detalle de Errores y Registros Omitidos (@Model.ErroresValidacion.Count):</h4>
+                <ul class="list-disc list-inside text-sm mt-2 max-h-48 overflow-y-auto">
+                    @foreach (var error in Model.ErroresValidacion)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+
+            @* LÓGICA DE CONFIRMACIÓN DE REEMPLAZO *@
+            @if (TempData["MensajeConfirmacion"] != null)
+            {
+                <div class="message-box warning">
+                    <h4 class="font-bold mb-2">CONFIRMACIÓN REQUERIDA</h4>
+                    @Html.Raw(TempData["MensajeConfirmacion"])
+                </div>
+
+                @* Campos ocultos para enviar los valores en el segundo POST *@
+                <input type="hidden" asp-for="Anio" value="@TempData["Anio"]" />
+                <input type="hidden" asp-for="Mes" value="@TempData["Mes"]" />
+                <input type="hidden" asp-for="TipoArchivo" value="@TempData["TipoArchivo"]" />
+
+                @* Campo de confirmación *@
+                <input type="hidden" asp-for="ConfirmarReemplazo" value="true" />
+
+                <div class="py-4 border-t border-gray-200">
+                    <label for="ArchivoCarga" class="block text-sm font-medium text-red-700 mb-2">⚠️ Seleccione el archivo para **CONFIRMAR** el reemplazo:</label>
+                    <input asp-for="ArchivoCarga" id="ArchivoCarga" type="file" accept=".csv, .txt" class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" required />
+                </div>
+
+                <div class="flex justify-start space-x-4 pt-5">
+                    <button type="submit" id="confirm-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        <i class="bi bi-exclamation-triangle"></i> Sí, Eliminar y Cargar Nuevo Lote
+                    </button>
+                    <a asp-page="./Index" class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Cancelar
+                    </a>
+                </div>
+            }
+            else
+            {
+                @* FORMULARIO DE CARGA NORMAL *@
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                    <div>
+                        <label asp-for="Anio" class="block text-sm font-medium text-gray-700">Año Fiscal</label>
+                        <select asp-for="Anio" id="Anio" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm transition duration-150 ease-in-out">
+                            @{
+                                var currentYear = DateTime.Now.Year;
+                                for (int i = currentYear - 5; i <= currentYear + 1; i++)
+                                {
+                                    <option value="@i">@i</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="Anio" class="text-red-500 text-xs mt-1"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="Mes" class="block text-sm font-medium text-gray-700">Mes Fiscal</label>
+                        <select asp-for="Mes" id="Mes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm transition duration-150 ease-in-out">
+                            @for (int i = 1; i <= 12; i++)
+                            {
+                                <option value="@i">@i.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i).ToUpper()</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Mes" class="text-red-500 text-xs mt-1"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="TipoArchivo" class="block text-sm font-medium text-gray-700">Tipo de Anexo</label>
+                        <select asp-for="TipoArchivo" id="TipoArchivo" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm transition duration-150 ease-in-out" required>
+                            <option value="">Seleccione...</option>
+                            <option value="Compras">COMPRAS</option>
+                            <option value="Retenciones">RETENCIONES</option>
+                            <option value="Ventas">VENTAS (Pendiente)</option>
+                        </select>
+                        <span asp-validation-for="TipoArchivo" class="text-red-500 text-xs mt-1"></span>
+                    </div>
+                </div>
+
+                <div class="py-4">
+                    <label for="ArchivoCarga" class="block text-sm font-medium text-gray-700 mb-2">Seleccionar Archivo (Tab Delimitado)</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md transition duration-150 ease-in-out hover:border-indigo-400">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3-11a2 2 0 00-2-1H17a2 2 0 00-2 1l-3 11m12-4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="ArchivoCarga" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                    <span>Subir un archivo</span>
+                                    <input asp-for="ArchivoCarga" id="ArchivoCarga" type="file" accept=".csv, .txt" class="sr-only" required>
+                                </label>
+                                <p class="pl-1">o arrastrar y soltar</p>
+                            </div>
+                            <p class="text-xs text-gray-500">
+                                CSV o TXT (Tab Delimitado)
+                            </p>
+                        </div>
+                    </div>
+                    <span asp-validation-for="ArchivoCarga" class="text-red-500 text-xs mt-1"></span>
+                </div>
+
+                <div class="pt-5">
+                    <button type="submit" id="submit-btn" class="w-full inline-flex justify-center py-3 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out transform hover:scale-105">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" id="loading-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Procesar y Validar Carga
+                    </button>
+                </div>
+            }
+        </form>
+    </div>
+
+    <div class="max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-2xl mt-10">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 border-b pb-2">
+            Historial de Lotes Cargados
+        </h2>
+
+        @if (!Model.CargasLotes.Any())
+        {
+            <p class="text-gray-500">No se han encontrado cargas por lote anteriores.</p>
+        }
+        else
+        {
+            <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Período</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Anexo</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registros</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Carga</th>
+                            <th scope="col" class="relative px-6 py-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach (var lote in Model.CargasLotes)
+                        {
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">@lote.Anio/@lote.Mes.ToString("00")</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">@lote.TipoArchivo</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">@lote.TotalRegistros</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">@lote.FechaCarga.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <form method="post" asp-page-handler="DeleteLote" asp-route-id="@lote.Id" style="display:inline;" onsubmit="return confirm('ADVERTENCIA: ¿Está seguro de eliminar esta carga? Esto eliminará los @lote.TipoArchivo correspondientes y no se puede deshacer.');">
+                                        <button type="submit" class="text-red-600 hover:text-red-900">Eliminar Lote</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.querySelector('form');
+            const submitButton = document.getElementById('submit-btn');
+            const confirmButton = document.getElementById('confirm-btn');
+
+            // Función para manejar el estado de carga
+            const handleLoadingState = (button, isConfirm = false) => {
+                if (!button) return;
+                const spinnerHtml = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+                const originalText = isConfirm ? 'Sí, Eliminar y Cargar Nuevo Lote' : 'Procesar y Validar Carga';
+
+                form.addEventListener('submit', () => {
+                    // Solo activar si no estamos en el modo de confirmación (el botón de confirmación ya está deshabilitado por el form)
+                    if (!isConfirm && document.getElementById('ArchivoCarga').files.length > 0 && document.getElementById('TipoArchivo').value !== "") {
+                        button.disabled = true;
+                        button.classList.add('bg-indigo-400', 'cursor-not-allowed');
+                        button.innerHTML = spinnerHtml + 'Procesando...';
+                    } else if (isConfirm) {
+                        button.disabled = true;
+                        button.classList.add('bg-red-400', 'cursor-not-allowed');
+                        button.innerHTML = spinnerHtml + 'Confirmando...';
+                    }
+                });
+            };
+
+            // Asegurar que los valores seleccionados se mantengan después de un Post
+            const selectMes = document.getElementById('Mes');
+            const selectAnio = document.getElementById('Anio');
+            const selectTipoArchivo = document.getElementById('TipoArchivo');
+
+            if (selectMes) selectMes.value = @Model.Mes;
+            if (selectAnio) selectAnio.value = @Model.Anio;
+            if (selectTipoArchivo && "@Model.TipoArchivo") selectTipoArchivo.value = "@Model.TipoArchivo";
+
+            // Aplicar el estado de carga al botón correspondiente
+            if (submitButton) {
+                handleLoadingState(submitButton, false);
+            }
+            if (confirmButton) {
+                handleLoadingState(confirmButton, true);
+            }
+        });
+    </script>
+}
