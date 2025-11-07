@@ -1,6 +1,8 @@
-// Directivas using necesarias para los modelos, servicios y Entity Framework Core
+ï»¿// Directivas using necesarias para los modelos, servicios y Entity Framework Core
 using AtsManager.Models;
 using AtsManager.Services;
+using AtsManager.ServicesA;
+using Microsoft.AspNetCore.Http; // Necesario para AddHttpContextAccessor y Session
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography.X509Certificates;
 
@@ -8,23 +10,19 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-// --- CONFIGURACIÓN DE BASE DE DATOS Y SERVICIOS ---
+// --- CONFIGURACIÃ“N DE BASE DE DATOS Y SERVICIOS ---
 
-// 1. Obtener la cadena de conexión del appsettings.json
-// El nombre de la conexión es "ATS_DB_Connection" y está en appsettings.json
+// 1. Obtener la cadena de conexiÃ³n del appsettings.json
 var connectionString = builder.Configuration.GetConnectionString("ATS_DB_Connection") ??
-                       throw new InvalidOperationException("Connection string 'ATS_DB_Connection' not found. Please check appsettings.json.");
+           throw new InvalidOperationException("Connection string 'ATS_DB_Connection' not found. Please check appsettings.json.");
 
-// 2. Registrar el DbContext (Inyección de Dependencias)
-// Esto permite que el DbContext sea inyectado en las Razor Pages y otros servicios.
+// 2. Registrar el DbContext (InyecciÃ³n de Dependencias)
 builder.Services.AddDbContext<AtsDbContext>(options =>
-    options.UseSqlServer(connectionString,
-        sqlServerOptions => sqlServerOptions.EnableRetryOnFailure() // <--- CORRECCIÓN CLAVE
-    ));
+  options.UseSqlServer(connectionString,
+    sqlServerOptions => sqlServerOptions.EnableRetryOnFailure() // CorrecciÃ³n clave
+Â  Â  ));
 
-// 3. Registrar el servicio de Generación XML (ATSXmlGenerator)
-// Se registra como Scoped y se inicializa con los datos del contribuyente 
-// obtenidos del appsettings.json.
+// 3. Registrar el servicio de GeneraciÃ³n XML (ATSXmlGenerator)
 var ruc = builder.Configuration["Contribuyente:Ruc"];
 var razonSocial = builder.Configuration["Contribuyente:RazonSocial"];
 
@@ -33,38 +31,69 @@ if (string.IsNullOrEmpty(ruc) || string.IsNullOrEmpty(razonSocial))
     throw new InvalidOperationException("Contribuyente Ruc o RazonSocial no configurados correctamente en appsettings.json");
 }
 
-// 1. Registro ÚNICO del ATSXmlGenerator
 builder.Services.AddScoped<ATSXmlGenerator>(sp =>
-    new ATSXmlGenerator(ruc, razonSocial));
+  new ATSXmlGenerator(ruc, razonSocial));
 
-// 2. Registro del XmlBatchImporter (¡Correcto!)
-// Este servicio se inyectará correctamente porque ATSXmlGenerator ya fue definido.
 builder.Services.AddScoped<XmlBatchImporter>();
-// --- FIN DE CONFIGURACIÓN ---
+// --- FIN DE CONFIGURACIÃ“N DE SERVICIOS PROPIOS ---
 
-// Añadir soporte para Razor Pages (Vistas y lógica de UI)
+// AÃ±adir soporte para Razor Pages (Vistas y lÃ³gica de UI)
 builder.Services.AddRazorPages();
+builder.Services.AddControllersWithViews();
 
-var app = builder.Build();
+// ðŸ’¥ CONFIGURACIÃ“N DE MIDDLEWARE REQUERIDO (ADD SERVICES) - UBICACIÃ“N CORRECTA
+builder.Services.AddHttpContextAccessor();
 
-// Configure the HTTP request pipeline (Configuración del middleware)
+builder.Services.AddSession(options => // Necesario para usar Session
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+
+    // -----------------------------------------------------
+    // ðŸŽ¯ CORRECCIÃ“N PARA EL ERROR DE COOKIE 'SameSite'
+    // -----------------------------------------------------
+    // Forzar la cookie a enviarse solo en el mismo sitio (Strict es el mÃ¡s seguro)
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    // Forzar la cookie a enviarse solo sobre HTTPS (resuelve el error de "insecure origin")
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    // -----------------------------------------------------
+});
+
+// -----------------------------------------------------
+// ðŸŽ¯ NUEVO BLOQUE: APLICAR LA MISMA POLÃTICA AL ANTIFORGERY TOKEN
+// -----------------------------------------------------
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.HttpOnly = true;
+});
+// -----------------------------------------------------
+
+
+var app = builder.Build(); // El punto donde la colecciÃ³n de servicios se vuelve de solo lectura.
+
+// Configure the HTTP request pipeline (ConfiguraciÃ³n del middleware)
 if (!app.Environment.IsDevelopment())
 {
-    // Manejo de errores en producción
-    app.UseExceptionHandler("/Error");
-    // Habilitar HSTS (medida de seguridad)
-    app.UseHsts();
+Â  Â  // Manejo de errores en producciÃ³n
+Â  Â  app.UseExceptionHandler("/Error");
+Â  Â  // Habilitar HSTS (medida de seguridad)
+Â  Â  app.UseHsts();
 }
 
-// Middleware de seguridad y estáticos
+// Middleware de seguridad y estÃ¡ticos
 app.UseHttpsRedirection();
 app.UseStaticFiles(); // Permite servir archivos de la carpeta wwwroot
 
-// Configuración de rutas
 app.UseRouting();
 
-// Middleware de autenticación y autorización (si se implementa)
+// Middleware de autenticaciÃ³n y autorizaciÃ³n (si se implementa)
 app.UseAuthorization();
+
+// Mover UseSession aquÃ­
+app.UseSession();
 
 // Mapear Razor Pages a rutas URL
 app.MapRazorPages();

@@ -1,0 +1,137 @@
+﻿@page
+@model AtsManager.Pages.Ventas.EditModel
+@using System.Globalization
+
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
+        Editar Venta
+    </h1>
+    <p class="text-gray-500 mb-8">
+        Modifique los detalles del comprobante de venta.
+    </p>
+
+    @if (!string.IsNullOrEmpty(Model.MensajeProceso))
+    {
+        <div class="alert alert-warning text-sm message-box error">
+            @Html.Raw(Model.MensajeProceso)
+        </div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="text-sm message-box error"></div>
+
+    <form method="post" class="space-y-6">
+
+        <input type="hidden" asp-for="Venta.Id" />
+        <input type="hidden" asp-for="Venta.CargaLoteId" />
+        <input type="hidden" asp-for="Venta.Anio" />
+        <input type="hidden" asp-for="Venta.Mes" />
+
+        <div class="bg-indigo-50 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-indigo-800 mb-4">Período y Documento</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label asp-for="Venta.Anio" class="block text-sm font-medium text-gray-700">Año</label>
+                    <input asp-for="Venta.Anio" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                </div>
+                <div>
+                    <label asp-for="Venta.Mes" class="block text-sm font-medium text-gray-700">Mes</label>
+                    <input asp-for="Venta.Mes" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                </div>
+                <div>
+                    <label asp-for="Venta.TipoComprobante" class="block text-sm font-medium text-gray-700">Tipo Comprobante</label>
+                    <input asp-for="Venta.TipoComprobante" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" readonly />
+                </div>
+            </div>
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label asp-for="Venta.NumComprobante" class="block text-sm font-medium text-gray-700">Número de Comprobante (Ej: 001001000000001)</label>
+                    <input asp-for="Venta.NumComprobante" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                </div>
+                <div>
+                    <label asp-for="Venta.FechaEmision" class="block text-sm font-medium text-gray-700">Fecha de Emisión</label>
+                    <input asp-for="Venta.FechaEmision" type="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
+                    <span asp-validation-for="Venta.FechaEmision" class="text-red-600 text-xs"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Datos del Cliente</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label asp-for="Venta.IdCliente" class="block text-sm font-medium text-gray-700">ID Cliente (RUC/Cédula)</label>
+                    <input asp-for="Venta.IdCliente" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
+                    <span asp-validation-for="Venta.IdCliente" class="text-red-600 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Venta.RazonSocialCliente" class="block text-sm font-medium text-gray-700">Razón Social Cliente</label>
+                    <input asp-for="Venta.RazonSocialCliente" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
+                    <span asp-validation-for="Venta.RazonSocialCliente" class="text-red-600 text-xs"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-yellow-50 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-yellow-800 mb-4">Bases e Impuestos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label asp-for="Venta.BaseImponible" class="block text-sm font-medium text-gray-700">Base Imponible (Gravada)</label>
+                    <input asp-for="Venta.BaseImponible" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required />
+                    <span asp-validation-for="Venta.BaseImponible" class="text-red-600 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Venta.MontoIva" class="block text-sm font-medium text-gray-700">Monto IVA</label>
+                    <input asp-for="Venta.MontoIva" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required />
+                    <span asp-validation-for="Venta.MontoIva" class="text-red-600 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Venta.MontoTotal" class="block text-sm font-medium text-gray-700">Monto Total</label>
+                    <input asp-for="Venta.MontoTotal" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required />
+                    <span asp-validation-for="Venta.MontoTotal" class="text-red-600 text-xs"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-red-50 p-4 rounded-lg">
+            <h2 class="text-lg font-semibold text-red-800 mb-4">Valores de Retención</h2>
+            @if (Model.Venta.CargaLoteId.HasValue)
+            {
+                <div class="text-sm text-red-600 mb-4 p-3 bg-red-100 rounded-md border border-red-300">
+                    **Advertencia de Lote:** Los campos de retención son de **sólo lectura** porque esta venta tiene una retención asociada al Lote **@Model.Venta.CargaLoteId**. Para editarlos, primero debe eliminar el lote de retención.
+                </div>
+            }
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label asp-for="Venta.valRetRenta" class="block text-sm font-medium text-gray-700">Valor Ret. Renta</label>
+                    <input asp-for="Venta.valRetRenta" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" readonly="@(Model.Venta.CargaLoteId.HasValue)" required />
+                    <span asp-validation-for="Venta.valRetRenta" class="text-red-600 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Venta.valRetIVA" class="block text-sm font-medium text-gray-700">Valor Ret. IVA</label>
+                    <input asp-for="Venta.valRetIVA" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" readonly="@(Model.Venta.CargaLoteId.HasValue)" required />
+                    <span asp-validation-for="Venta.valRetIVA" class="text-red-600 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Venta.NumRetencion" class="block text-sm font-medium text-gray-700">Número Retención</label>
+                    <input asp-for="Venta.NumRetencion" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" readonly="@(Model.Venta.CargaLoteId.HasValue)" />
+                    <span asp-validation-for="Venta.NumRetencion" class="text-red-600 text-xs"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-5 flex justify-between">
+            <a asp-page="./Index" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <i class="fas fa-arrow-left mr-2"></i> Cancelar
+            </a>
+            <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                <i class="fas fa-save mr-2"></i> Actualizar Venta
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

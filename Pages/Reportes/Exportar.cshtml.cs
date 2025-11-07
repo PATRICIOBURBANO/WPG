@@ -10,6 +10,7 @@ using System.Collections.Generic;
 
 // Asegúrate de que esta directiva esté incluida
 using System.Text;
+using AtsManager.ServicesA;
 
 namespace AtsManager.Pages.Reportes
 {

@@ -5,8 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
+using AtsManager.Services;
 
-namespace AtsManager.Services
+namespace AtsManager.ServicesA
 {
     public class ATSXmlGenerator
     {
@@ -158,7 +159,7 @@ namespace AtsManager.Services
                     new XElement("fechaEmision", compra.FechaEmision.GetValueOrDefault().ToString("dd/MM/yyyy", xmlCulture)),
                     new XElement("autorizacion", compra.Autorizacion),
 
-                    new XElement("baseNoGraIva", (compra.BaseNoGraIva ?? 0.00M).ToString("F2", xmlCulture)),
+                    new XElement("baseNoGraIva", (compra.BaseImponible ).ToString("F2", xmlCulture)),
                     new XElement("baseImponible", (compra.BaseNoGraIva ?? 0.00M).ToString("F2", xmlCulture)),
                     new XElement("baseImpGrav", (compra.BaseImpGrav ?? 0.00M).ToString("F2", xmlCulture)),
                     new XElement("baseImpExe", (compra.BaseImpExe ?? 0.00M).ToString("F2", xmlCulture)),
@@ -225,7 +226,7 @@ namespace AtsManager.Services
                     new XElement("ivaComp", "0.00"),
 
                     new XElement("formasDePago",
-                    new XElement("formaPago", "01")
+                    new XElement("formaPago", "20")
                     )
                 );
                 nodoVentas.Add(detalleVenta);
