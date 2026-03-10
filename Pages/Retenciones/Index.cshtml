@@ -1,0 +1,92 @@
+﻿@page
+@model AtsManager.Pages.Retenciones.IndexModel
+@using System.Globalization
+
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-extrabold text-gray-900">Listado de Retenciones de Clientes</h1>
+        @* Adaptar el botón para la acción de Retenciones, si aplica **@
+        <a asp-page="Create" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            Nueva Retención Manual
+        </a>
+    </div>
+
+    @* Mostrar mensaje de éxito/error (Si usa MensajeProceso en el modelo de Retenciones) *@
+    @if (!string.IsNullOrEmpty(Model.MensajeProceso))
+    {
+        <div class="p-4 rounded-lg border-l-4 mb-6 font-semibold @(Model.MensajeProceso.StartsWith("ERROR") ? "bg-red-100 text-red-800 border-red-500" : "bg-green-100 text-green-800 border-green-500")">
+            @Model.MensajeProceso
+        </div>
+    }
+
+    <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Período</th>
+                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">No. Retención</th>
+                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Doc. Afectado</th>
+                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">RUC</th>
+                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base IVA</th>
+                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Ret. IVA</th>
+                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base Rita</th>
+                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">% Air</th>
+                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Ret. Renta</th>
+                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                @foreach (var item in Model.Retenciones)
+                {
+                    <tr>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">
+                            @item.Anio/@item.Mes.ToString("00")
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                            @(item.FechaRetencion?.ToString("dd/MM/yyyy") ?? "-")
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                            @item.NumRetencionCompleto
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                            @item.DocAfectado
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                            @item.IdCliente
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
+                            @item.RazonSocialCliente
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900">
+                            @((item.BaseImpGrav ?? 0).ToString("N2", CultureInfo.InvariantCulture))
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-red-600 font-medium">
+                            @((item.ValRetIva ?? 0).ToString("N2", CultureInfo.InvariantCulture))
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900">
+                            @((item.BaseImpAir ?? 0).ToString("N2", CultureInfo.InvariantCulture))
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-500">
+                            @((item.PorcentajeAir ?? 0).ToString("N1"))
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-red-600 font-medium">
+                            @((item.ValRetRenta ?? 0).ToString("N2", CultureInfo.InvariantCulture))
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right font-bold text-gray-900">
+                            @((item.TotalRetencion ?? 0).ToString("N2", CultureInfo.InvariantCulture))
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Scripts adicionales aquí si son necesarios
+    </script>
+}

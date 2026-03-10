@@ -1,0 +1,116 @@
+@page
+@model AtsManager.Pages.Descargas.IndexModel
+@using System.Globalization
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+    <h1 class="text-2xl font-extrabold text-gray-900 mb-4 border-b pb-2">
+        Descargar Documentos del SRI
+    </h1>
+    <p class="text-gray-500 mb-6">
+        Descargue comprobantes electrónicos desde el portal del SRI usando automatización.
+    </p>
+
+    @if (!string.IsNullOrEmpty(Model.Mensaje))
+    {
+        <div class="p-4 rounded-lg border-l-4 mb-4 font-semibold @(Model.Mensaje.Contains("ERROR") || Model.Mensaje.Contains("❌") ? "bg-red-100 text-red-800 border-red-500" : "bg-green-100 text-green-800 border-green-500")">
+            @Model.Mensaje
+        </div>
+    }
+
+    @if (Model.Ejecutando)
+    {
+        <div class="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-300">
+            <div class="flex items-center">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
+                <span class="text-blue-800 font-medium">Ejecutando descarga del SRI... Por favor espere.</span>
+            </div>
+        </div>
+    }
+
+    <form method="post" class="space-y-6">
+        <div class="bg-blue-50 p-4 rounded-lg border">
+            <h2 class="text-lg font-semibold text-blue-800 mb-3">Configuración de Descarga</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label asp-for="Anio" class="block text-sm font-medium text-gray-700">Año</label>
+                    <select asp-for="Anio" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        @{
+                            var year = DateTime.Now.Year;
+                            for (int i = year; i >= year - 3; i--)
+                            {
+                                <option value="@i" selected="@(i == Model.Anio)">@i</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="Mes" class="block text-sm font-medium text-gray-700">Mes</label>
+                    <select asp-for="Mes" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        @for (int i = 1; i <= 12; i++)
+                        {
+                            <option value="@i" selected="@(i == Model.Mes)">@i.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="Modo" class="block text-sm font-medium text-gray-700">Modo</label>
+                    <select asp-for="Modo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="ambos">Emitidos y Recibidos</option>
+                        <option value="emitidos">Solo Emitidos</option>
+                        <option value="recibidos">Solo Recibidos</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Empresas Configuradas</h2>
+            <p class="text-sm text-gray-600 mb-3">Empresas definidas en el archivo de configuración del SRI:</p>
+            
+            <div class="space-y-2">
+                @foreach (var emp in Model.EmpresasSRI)
+                {
+                    <div class="flex items-center p-2 bg-white rounded border">
+                        <input type="checkbox" name="EmpresasSeleccionadas" value="@emp.ruc" class="h-4 w-4 text-indigo-600 rounded" />
+                        <span class="ml-2 text-sm text-gray-700">@emp.ruc - @emp.empresa</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-300">
+            <h3 class="text-sm font-semibold text-yellow-800 mb-2">Información</h3>
+            <ul class="text-xs text-yellow-700 space-y-1">
+                <li>• Esta función ejecuta el programa Python de descarga del SRI</li>
+                <li>• Requiere que Chrome esté instalado</li>
+                <li>• Los documentos se descargarán en la carpeta configurada del programa</li>
+                <li>• El proceso puede tomar varios minutos dependiendo de la cantidad de documentos</li>
+            </ul>
+        </div>
+
+        <div class="flex justify-between">
+            <a asp-page="/Index" class="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Cancelar</a>
+            <button type="submit" asp-page-handler="Descargar" 
+                    disabled="@Model.Ejecutando"
+                    class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                @(Model.Ejecutando ? "Descargando..." : "Iniciar Descarga")
+            </button>
+        </div>
+    </form>
+
+    @if (Model.Resultado.Any())
+    {
+        <div class="mt-6">
+            <h3 class="text-lg font-semibold mb-2">Resultado:</h3>
+            <div class="bg-gray-100 p-4 rounded-lg max-h-64 overflow-y-auto text-sm font-mono">
+                @foreach (var linea in Model.Resultado)
+                {
+                    <div class="whitespace-pre-wrap">@linea</div>
+                }
+            </div>
+        </div>
+    }
+</div>

@@ -7,7 +7,7 @@
         Generar y Exportar ATS (XML)
     </h1>
     <p class="text-gray-500 mb-8">
-        Seleccione el período fiscal para consolidar todos los registros y generar el archivo XML.
+        Seleccione el MES y AÑO que desea exportar al archivo XML.
     </p>
 
     @* Mostrar mensaje de proceso (éxito o error) *@
@@ -19,7 +19,40 @@
     }
 
     <form method="post" asp-page-handler="Exportar" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50 p-6 rounded-lg border">
+            <div>
+                <label asp-for="EmpresaId" class="block text-sm font-medium text-gray-700">
+                    Empresa
+                </label>
+                <select asp-for="EmpresaId" 
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">-- Seleccionar Empresa --</option>
+                    @foreach (var empresa in Model.Empresas)
+                    {
+                        <option value="@empresa.Id">@empresa.Ruc - @empresa.RazonSocial</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label asp-for="RucOverride" class="block text-sm font-medium text-gray-700">
+                    RUC (manual)
+                </label>
+                <input asp-for="RucOverride"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                       placeholder="Ej: 1790012345001" />
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-lg">
+            <div>
+                <label asp-for="RazonSocialOverride" class="block text-sm font-medium text-gray-700">
+                    Razón Social (manual)
+                </label>
+                <input asp-for="RazonSocialOverride"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                       placeholder="EMPRESA EJEMPLO S.A." />
+            </div>
 
             <div>
                 <label asp-for="Anio" class="block text-sm font-medium text-gray-700">Año Fiscal</label>

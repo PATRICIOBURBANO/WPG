@@ -26,7 +26,7 @@
 <body>
     <!-- Barra de Navegación (Header) -->
     <header class="bg-white shadow-md sticky top-0 z-10">
-        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav class="w-full px-4 sm:px-6">
             <div class="flex justify-between h-16">
                 <div class="flex">
                     <!-- Logo / Nombre de la App -->
@@ -34,14 +34,19 @@
                         ATS Manager
                     </a>
                 </div>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 overflow-x-auto">
                     <!-- Menú de Navegación Principal -->
-                    <a asp-page="/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Inicio</a>
-                    <a asp-page="/Cargas/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Carga Lotes</a>
-                    <a asp-page="/Compras/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Compras (CRUD)</a>
-                    <a asp-page="/Ventas/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Ventas (CRUD)</a>
-                    <a asp-page="/ImportarXML/Index" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Importar XML</a>
-                    <a asp-page="/Reportes/Exportar" class="text-white bg-green-500 hover:bg-green-600 px-3 py-2 rounded-lg text-sm font-medium transition">
+                    <a asp-page="/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Inicio</a>
+                    <a asp-page="/Cargas/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Carga Lotes</a>
+                    <a asp-page="/Compras/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Compras</a>
+                    <a asp-page="/Ventas/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Ventas</a>
+                    <a asp-page="/RetencionesCompras/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Ret. Compras</a>
+                    <a asp-page="/Retenciones/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Ret. Ventas</a>
+                    <a asp-page="/ImportarXML/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Importar XML</a>
+                    <a asp-page="/Descargas/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Descargar SRI</a>
+                    <a asp-page="/Empresas/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Empresas</a>
+                    <a asp-page="/Reportes/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Reportes</a>
+                    <a asp-page="/Reportes/Exportar" class="text-white bg-green-500 hover:bg-green-600 px-3 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap">
                         Exportar ATS
                     </a>
                 </div>
@@ -50,15 +55,15 @@
     </header>
 
     <!-- Contenido Específico de la Página (Aquí se inyecta el Index.cshtml) -->
-    <div class="main-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="main-content w-full px-4 sm:px-6">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
     <!-- Pie de Página (Footer) -->
-    <footer class="border-t bg-white mt-10">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-500">
+    <footer class="border-t bg-white mt-10 w-full px-4 sm:px-6">
+        <div class="py-4 text-center text-sm text-gray-500">
             &copy; @DateTime.Now.Year - ATS Manager. Desarrollado con ASP.NET Core y Razor Pages.
         </div>
     </footer>

@@ -134,7 +134,7 @@ namespace AtsManager.Pages.Ventas
 
             try
             {
-                using (var reader = new StreamReader(ArchivoCarga.OpenReadStream(), Encoding.Default))
+                using (var reader = new StreamReader(ArchivoCarga.OpenReadStream(), Encoding.UTF8))
                 {
                     string line;
                     bool esCabecera = true;
@@ -208,6 +208,7 @@ namespace AtsManager.Pages.Ventas
                             // EJEMPLO: var nuevaRetencion = new Retencion { /* ... mapeo de campos de retencion ... */ };
                             // EJEMPLO: retencionesCargadas.Add(nuevaRetencion);
                         }
+                        
 
                         lineasProcesadas++;
                     }

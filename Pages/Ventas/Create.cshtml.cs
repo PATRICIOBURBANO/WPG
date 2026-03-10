@@ -3,9 +3,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using AtsManager.Models;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AtsManager.Pages.Ventas
 {
@@ -16,19 +19,44 @@ namespace AtsManager.Pages.Ventas
         [BindProperty]
         public Venta RegistroVenta { get; set; } = new Venta();
 
+        [BindProperty]
+        [Required(ErrorMessage = "Seleccione una empresa.")]
+        public int EmpresaId { get; set; }
+
+        public List<Empresa> Empresas { get; set; } = new List<Empresa>();
+
         // NUEVO: Propiedad para capturar la Clave de Acceso
         [BindProperty]
-        [StringLength(49, MinimumLength = 49, ErrorMessage = "La Clave de Acceso debe tener 49 dígitos.")]
-        [RegularExpression(@"^\d{49}$", ErrorMessage = "La Clave de Acceso solo puede contener números.")]
+        [StringLength(49, MinimumLength = 49, ErrorMessage = "La Clave de Acceso debe tener 49 dÃ­gitos.")]
+        [RegularExpression(@"^\d{49}$", ErrorMessage = "La Clave de Acceso solo puede contener nÃºmeros.")]
         public string? AutorizacionInput { get; set; }
 
-        // Datos para los campos de selección (sin cambios)
+        // Datos para los campos de selecciÃ³n (sin cambios)
         public List<string> TiposId { get; set; } = new List<string> { "04", "05", "06", "07", "08" };
         public List<string> TiposComprobante { get; set; } = new List<string> { "18", "41", "07" };
 
         public CreateVentaModel(AtsDbContext context)
         {
             _db = context;
+        }
+
+        public async Task<IActionResult> OnGetAsync()
+        {
+            Empresas = await _db.Empresas.Where(e => e.Activa).OrderBy(e => e.RazonSocial).ToListAsync();
+            
+            if (RegistroVenta.Id == 0)
+            {
+                RegistroVenta = new Venta
+                {
+                    FechaEmision = DateTime.Now.Date,
+                    TipoComprobante = "18",
+                    TipoIdCliente = "04",
+                    Anio = (short)DateTime.Now.Year,
+                    Mes = (short)DateTime.Now.Month
+                };
+            }
+            ViewData["Title"] = "Ingreso de Nueva Venta";
+            return Page();
         }
 
         public IActionResult OnGet()
@@ -55,7 +83,7 @@ namespace AtsManager.Pages.Ventas
             {
                 if (!string.IsNullOrEmpty(AutorizacionInput) && AutorizacionInput.Length != 49)
                 {
-                    ModelState.AddModelError("AutorizacionInput", "La Clave de Acceso debe ser de 49 dígitos.");
+                    ModelState.AddModelError("AutorizacionInput", "La Clave de Acceso debe ser de 49 dï¿½gitos.");
                 }
                 return Page();
             }
@@ -64,26 +92,26 @@ namespace AtsManager.Pages.Ventas
             {
                 try
                 {
-                    // 1. FECHA DE EMISIÓN (Posición 0, 6 dígitos: DDMMAA)
+                    // 1. FECHA DE EMISIï¿½N (Posiciï¿½n 0, 6 dï¿½gitos: DDMMAA)
                     string fechaString = AutorizacionInput.Substring(0, 6);
                     DateTime fechaEmision = DateTime.ParseExact(fechaString, "ddMMyy", CultureInfo.InvariantCulture);
 
-                    // 2. TIPO DE COMPROBANTE (Posición 8, 2 dígitos)
+                    // 2. TIPO DE COMPROBANTE (Posiciï¿½n 8, 2 dï¿½gitos)
                     string tipoComprobante = AutorizacionInput.Substring(8, 2);
 
-                    // 3. RUC PROVEEDOR/CLIENTE (Posición 10, 13 dígitos)
+                    // 3. RUC PROVEEDOR/CLIENTE (Posiciï¿½n 10, 13 dï¿½gitos)
                     string rucCliente = AutorizacionInput.Substring(10, 13);
 
-                    // 4. SERIE (Posición 23, 6 dígitos: EEEPPP)
+                    // 4. SERIE (Posiciï¿½n 23, 6 dï¿½gitos: EEEPPP)
                     string serieCompleta = AutorizacionInput.Substring(23, 6);
 
-                    // 5. SECUENCIAL (Posición 29, 9 dígitos)
+                    // 5. SECUENCIAL (Posiciï¿½n 29, 9 dï¿½gitos)
                     string secuencial = AutorizacionInput.Substring(29, 9);
 
-                    // 6. NÚMERO CONSOLIDADO (Serie + Secuencial)
+                    // 6. Nï¿½MERO CONSOLIDADO (Serie + Secuencial)
                     string numComprobante = serieCompleta + secuencial;
 
-                    // Actualizar el modelo de la página
+                    // Actualizar el modelo de la pï¿½gina
                     RegistroVenta.Anio = (short)fechaEmision.Year;
                     RegistroVenta.Mes = (short)fechaEmision.Month;
                     RegistroVenta.FechaEmision = fechaEmision;
@@ -96,7 +124,7 @@ namespace AtsManager.Pages.Ventas
                     RegistroVenta.TipoComprobante = tipoComprobante;
                     RegistroVenta.NumComprobante = numComprobante;
 
-                    ModelState.AddModelError(string.Empty, "Datos de comprobante precargados con éxito. Complete Razón Social y valores.");
+                    ModelState.AddModelError(string.Empty, "Datos de comprobante precargados con ï¿½xito. Complete Razï¿½n Social y valores.");
                 }
                 catch (Exception ex)
                 {
@@ -108,11 +136,26 @@ namespace AtsManager.Pages.Ventas
             return Page();
         }
 
-        // --- MANEJADOR DE ENVÍO FINAL (OnPostAsync) ---
+        // --- MANEJADOR DE ENVï¿½O FINAL (OnPostAsync) ---
         public async Task<IActionResult> OnPostAsync()
         {
             ModelState.Remove("RegistroVenta.CargaLote");
             ModelState.Remove("RegistroVenta.CargaLoteId");
+
+            Empresas = await _db.Empresas.Where(e => e.Activa).OrderBy(e => e.RazonSocial).ToListAsync();
+
+            if (EmpresaId <= 0)
+            {
+                ModelState.AddModelError("EmpresaId", "Seleccione una empresa.");
+                return Page();
+            }
+
+            var empresa = await _db.Empresas.FindAsync(EmpresaId);
+            if (empresa == null)
+            {
+                ModelState.AddModelError("EmpresaId", "La empresa seleccionada no existe.");
+                return Page();
+            }
 
             if (!ModelState.IsValid)
             {
@@ -128,6 +171,7 @@ namespace AtsManager.Pages.Ventas
             RegistroVenta.CargaLoteId = null;
             RegistroVenta.UsuarioCreacion = User?.Identity?.Name ?? "SistemaManual";
             RegistroVenta.FechaCreacion = DateTime.Now;
+            RegistroVenta.RucEmpresa = empresa.Ruc;
 
             _db.Ventas.Add(RegistroVenta);
             await _db.SaveChangesAsync();

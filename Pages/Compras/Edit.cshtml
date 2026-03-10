@@ -1,128 +1,178 @@
-﻿@page
+@page
 @model AtsManager.Pages.Compras.EditModel
 @using System.Globalization
 
-<div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-    <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
+<div class="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+    <h1 class="text-2xl font-extrabold text-gray-900 mb-4 border-b pb-2">
         Editar Compra
     </h1>
-    <p class="text-gray-500 mb-8">
-        Modifique los detalles del comprobante de compra.
-    </p>
 
-    <div asp-validation-summary="ModelOnly" class="text-sm message-box error"></div>
+    <div asp-validation-summary="ModelOnly" class="text-sm message-box error mb-4"></div>
 
-    <form method="post" class="space-y-6">
+    <form method="post" class="space-y-4">
         <input type="hidden" asp-for="RegistroCompra.Id" />
         <input type="hidden" asp-for="RegistroCompra.FechaCreacion" />
         <input type="hidden" asp-for="RegistroCompra.UsuarioCreacion" />
         <input type="hidden" asp-for="RegistroCompra.CargaLoteId" />
+        <input type="hidden" asp-for="RegistroCompra.CodigoCompra" />
 
+        @* PERIODO Y PROVEEDOR *@
         <div class="bg-indigo-50 p-4 rounded-lg">
-            <h2 class="text-lg font-semibold text-indigo-800 mb-4">Período y Proveedor</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <h2 class="text-base font-semibold text-indigo-800 mb-3">Período y Proveedor</h2>
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
                 <div>
-                    <label asp-for="RegistroCompra.Anio" class="block text-sm font-medium text-gray-700">Año</label>
-                    <input asp-for="RegistroCompra.Anio" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
-                    <span asp-validation-for="RegistroCompra.Anio" class="text-red-600 text-xs"></span>
+                    <label asp-for="RegistroCompra.Anio" class="block text-xs font-medium text-gray-700">Año</label>
+                    <input asp-for="RegistroCompra.Anio" type="number" class="w-full rounded border-gray-300 p-1 text-sm" required />
                 </div>
                 <div>
-                    <label asp-for="RegistroCompra.Mes" class="block text-sm font-medium text-gray-700">Mes</label>
-                    <input asp-for="RegistroCompra.Mes" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
-                    <span asp-validation-for="RegistroCompra.Mes" class="text-red-600 text-xs"></span>
+                    <label asp-for="RegistroCompra.Mes" class="block text-xs font-medium text-gray-700">Mes</label>
+                    <input asp-for="RegistroCompra.Mes" type="number" class="w-full rounded border-gray-300 p-1 text-sm" required />
                 </div>
                 <div>
-                    <label asp-for="RegistroCompra.ParteRelacionada" class="block text-sm font-medium text-gray-700">Parte Relacionada</label>
-                    <select asp-for="RegistroCompra.ParteRelacionada" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                        <option value="False">No (0)</option>
-                        <option value="True">Sí (1)</option>
-                    </select>
+                    <label asp-for="RegistroCompra.TipoIdProveedor" class="block text-xs font-medium text-gray-700">Tipo ID</label>
+                    <input asp-for="RegistroCompra.TipoIdProveedor" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="01" />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.IdProveedor" class="block text-xs font-medium text-gray-700">RUC/Cédula</label>
+                    <input asp-for="RegistroCompra.IdProveedor" class="w-full rounded border-gray-300 p-1 text-sm" required />
+                </div>
+                <div class="col-span-2">
+                    <label asp-for="RegistroCompra.RazonSocialProveedor" class="block text-xs font-medium text-gray-700">Razón Social</label>
+                    <input asp-for="RegistroCompra.RazonSocialProveedor" class="w-full rounded border-gray-300 p-1 text-sm" required />
                 </div>
             </div>
         </div>
 
+        @* DOCUMENTO *@
         <div class="bg-gray-50 p-4 rounded-lg">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">Datos del Documento</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <h2 class="text-base font-semibold text-gray-800 mb-3">Documento</h2>
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
                 <div>
-                    <label asp-for="RegistroCompra.TipoIdProveedor" class="block text-sm font-medium text-gray-700">Tipo ID Proveedor</label>
-                    <select asp-for="RegistroCompra.TipoIdProveedor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                        @foreach (var id in Model.TiposId)
-                        {
-                            <option value="@id">@id</option>
-                        }
-                    </select>
+                    <label asp-for="RegistroCompra.TipoComprobante" class="block text-xs font-medium text-gray-700">Tipo Doc</label>
+                    <input asp-for="RegistroCompra.TipoComprobante" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="01" />
                 </div>
                 <div>
-                    <label asp-for="RegistroCompra.IdProveedor" class="block text-sm font-medium text-gray-700">ID Proveedor (RUC/Cédula)</label>
-                    <input asp-for="RegistroCompra.IdProveedor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
-                    <span asp-validation-for="RegistroCompra.IdProveedor" class="text-red-600 text-xs"></span>
+                    <label asp-for="RegistroCompra.CodSustento" class="block text-xs font-medium text-gray-700">Cod. Sustento</label>
+                    <input asp-for="RegistroCompra.CodSustento" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="01" />
                 </div>
                 <div>
-                    <label asp-for="RegistroCompra.RazonSocialProveedor" class="block text-sm font-medium text-gray-700">Razón Social Proveedor</label>
-                    <input asp-for="RegistroCompra.RazonSocialProveedor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
-                    <span asp-validation-for="RegistroCompra.RazonSocialProveedor" class="text-red-600 text-xs"></span>
+                    <label asp-for="RegistroCompra.Estab" class="block text-xs font-medium text-gray-700">Estab.</label>
+                    <input asp-for="RegistroCompra.Estab" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="001" />
                 </div>
                 <div>
-                    <label asp-for="RegistroCompra.TipoComprobante" class="block text-sm font-medium text-gray-700">Tipo Comprobante</label>
-                    <select asp-for="RegistroCompra.TipoComprobante" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                        @foreach (var comp in Model.TiposComprobante)
-                        {
-                            <option value="@comp">@comp</option>
-                        }
-                    </select>
+                    <label asp-for="RegistroCompra.PtoEmi" class="block text-xs font-medium text-gray-700">PtoEmi</label>
+                    <input asp-for="RegistroCompra.PtoEmi" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="001" />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.Secuencial" class="block text-xs font-medium text-gray-700">Secuencial</label>
+                    <input asp-for="RegistroCompra.Secuencial" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="000000001" />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.NumComprobante" class="block text-xs font-medium text-gray-700">Num. Completo</label>
+                    <input asp-for="RegistroCompra.NumComprobante" class="w-full rounded border-gray-300 p-1 text-sm" />
                 </div>
             </div>
-            <div class="mt-6">
-                <label asp-for="RegistroCompra.NumComprobante" class="block text-sm font-medium text-gray-700">Número de Comprobante (Ej: 001001000000001)</label>
-                <input asp-for="RegistroCompra.NumComprobante" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
-                <span asp-validation-for="RegistroCompra.NumComprobante" class="text-red-600 text-xs"></span>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                <div>
+                    <label asp-for="RegistroCompra.FechaEmision" class="block text-xs font-medium text-gray-700">Fecha Emisión</label>
+                    <input asp-for="RegistroCompra.FechaEmision" type="date" class="w-full rounded border-gray-300 p-1 text-sm" />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.Autorizacion" class="block text-xs font-medium text-gray-700">Clave Acceso</label>
+                    <input asp-for="RegistroCompra.Autorizacion" class="w-full rounded border-gray-300 p-1 text-sm" />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.ParteRelacionada" class="block text-xs font-medium text-gray-700">Parte Rel.</label>
+                    <select asp-for="RegistroCompra.ParteRelacionada" class="w-full rounded border-gray-300 p-1 text-sm">
+                        <option value="False">No</option>
+                        <option value="True">Sí</option>
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.TipoProveedor" class="block text-xs font-medium text-gray-700">Tipo Proveedor</label>
+                    <input asp-for="RegistroCompra.TipoProveedor" class="w-full rounded border-gray-300 p-1 text-sm" />
+                </div>
             </div>
         </div>
 
+        @* BASES E IMPUESTOS - CON CALCULO AUTOMATICO *@
         <div class="bg-yellow-50 p-4 rounded-lg">
-            <h2 class="text-lg font-semibold text-yellow-800 mb-4">Bases Imponibles y Valores</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <h2 class="text-base font-semibold text-yellow-800 mb-3">Bases e Impuestos</h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div>
-                    <label asp-for="RegistroCompra.BaseNoGraIva" class="block text-sm font-medium text-gray-700">Base No Objeto de IVA</label>
-                    <input asp-for="RegistroCompra.BaseNoGraIva" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required />
+                    <label class="block text-xs font-medium text-gray-700">Base 0% (No Gravada)</label>
+                    <input type="number" step="0.01" id="BaseNoGraIva" name="RegistroCompra.BaseNoGraIva" value="@Model.RegistroCompra.BaseNoGraIva" class="w-full rounded border-gray-300 p-1 text-sm text-right" oninput="calcularTotales()" />
                 </div>
                 <div>
-                    <label asp-for="RegistroCompra.BaseImponible" class="block text-sm font-medium text-gray-700">Base 12% / Gravada</label>
-                    <input asp-for="RegistroCompra.BaseImponible" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required />
+                    <label class="block text-xs font-medium text-gray-700">Base 12%/15% (Gravada)</label>
+                    <input type="number" step="0.01" id="BaseImpGrav" name="RegistroCompra.BaseImpGrav" value="@Model.RegistroCompra.BaseImpGrav" class="w-full rounded border-gray-300 p-1 text-sm text-right" oninput="calcularTotales()" />
                 </div>
                 <div>
-                    <label asp-for="RegistroCompra.BaseImpGrav" class="block text-sm font-medium text-gray-700">Base 0% / Tarifa Cero</label>
-                    <input asp-for="RegistroCompra.BaseImpGrav" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required />
-                </div>
-
-                <div>
-                    <label asp-for="RegistroCompra.MontoIva" class="block text-sm font-medium text-gray-700">Monto IVA</label>
-                    <input asp-for="RegistroCompra.MontoIva" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required />
+                    <label class="block text-xs font-medium text-gray-700">IVA (15%)</label>
+                    <input type="number" step="0.01" id="MontoIva" name="RegistroCompra.MontoIva" value="@Model.RegistroCompra.MontoIva" class="w-full rounded border-gray-300 p-1 text-sm text-right" readonly />
                 </div>
                 <div>
-                    <label asp-for="RegistroCompra.MontoIce" class="block text-sm font-medium text-gray-700">Monto ICE</label>
-                    <input asp-for="RegistroCompra.MontoIce" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required />
+                    <label class="block text-xs font-medium text-gray-700">ICE</label>
+                    <input type="number" step="0.01" id="MontoIce" name="RegistroCompra.MontoIce" value="@Model.RegistroCompra.MontoIce" class="w-full rounded border-gray-300 p-1 text-sm text-right" />
                 </div>
                 <div>
-                    <label asp-for="RegistroCompra.MontoTotal" class="block text-sm font-medium text-gray-700">Monto Total</label>
-                    <input asp-for="RegistroCompra.MontoTotal" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" required />
+                    <label class="block text-xs font-medium text-gray-700 font-bold">TOTAL</label>
+                    <input type="number" step="0.01" id="MontoTotal" name="RegistroCompra.MontoTotal" value="@Model.RegistroCompra.MontoTotal" class="w-full rounded border-gray-300 p-1 text-sm text-right font-bold" readonly />
                 </div>
             </div>
         </div>
 
-        <div class="pt-5 flex justify-between">
-            <a asp-page="./Index" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Cancelar
-            </a>
-            <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
-                Actualizar Compra
-            </button>
+        @* RETENCIONES *@
+        <div class="bg-red-50 p-4 rounded-lg">
+            <h2 class="text-base font-semibold text-red-800 mb-3">Retenciones</h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div>
+                    <label asp-for="RegistroCompra.ValRetServ100" class="block text-xs font-medium text-gray-700">Ret. IVA 100%</label>
+                    <input asp-for="RegistroCompra.ValRetServ100" type="number" step="0.01" class="w-full rounded border-gray-300 p-1 text-sm" />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.ValRetAir" class="block text-xs font-medium text-gray-700">Ret. AIR</label>
+                    <input asp-for="RegistroCompra.ValRetAir" type="number" step="0.01" class="w-full rounded border-gray-300 p-1 text-sm" />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.BaseImpAir" class="block text-xs font-medium text-gray-700">Base AIR</label>
+                    <input asp-for="RegistroCompra.BaseImpAir" type="number" step="0.01" class="w-full rounded border-gray-300 p-1 text-sm" />
+                </div>
+                <div>
+                    <label asp-for="RegistroCompra.CodRetAir" class="block text-xs font-medium text-gray-700">Cod. AIR</label>
+                    <input asp-for="RegistroCompra.CodRetAir" class="w-full rounded border-gray-300 p-1 text-sm" />
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between pt-4">
+            <a asp-page="./Index" class="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 text-sm">Cancelar</a>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">Actualizar</button>
         </div>
     </form>
 </div>
 
 @section Scripts {
+    <script>
+        function calcularTotales() {
+            var baseNoGraIva = parseFloat(document.getElementById('BaseNoGraIva').value) || 0;
+            var baseImpGrav = parseFloat(document.getElementById('BaseImpGrav').value) || 0;
+            var montoIce = parseFloat(document.getElementById('MontoIce').value) || 0;
+            
+            // Calcular IVA al 15%
+            var iva = Math.round(baseImpGrav * 0.15 * 100) / 100;
+            
+            // Calcular Total
+            var total = baseNoGraIva + baseImpGrav + iva + montoIce;
+            
+            // Asignar valores
+            document.getElementById('MontoIva').value = iva.toFixed(2);
+            document.getElementById('MontoTotal').value = total.toFixed(2);
+        }
+        
+        // Calcular al cargar la pagina
+        window.onload = calcularTotales;
+    </script>
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }

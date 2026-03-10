@@ -14,17 +14,20 @@ namespace AtsManager.Pages.Compras
             _db = context;
         }
 
-        // Lista que se mostrará en la vista
+        // Lista que se mostrarï¿½ en la vista
         public IList<Compra> Compra { get; set; } = default!;
+        
+        public int TotalRegistros { get; set; }
 
-        // Mensaje para mostrar éxito o error después de una operación
+        // Mensaje para mostrar ï¿½xito o error despuï¿½s de una operaciï¿½n
         [TempData]
         public string MensajeProceso { get; set; } = string.Empty;
 
-        // Recupera todas las compras al cargar la página
+        // Recupera todas las compras al cargar la pï¿½gina
         public async Task OnGetAsync()
         {
             ViewData["Title"] = "Listado de Compras (ATS)";
+            TotalRegistros = await _db.Compras.CountAsync();
             Compra = await _db.Compras
                 .OrderByDescending(c => c.Anio)
                 .ThenByDescending(c => c.Mes)
@@ -32,12 +35,12 @@ namespace AtsManager.Pages.Compras
                 .ToListAsync();
         }
 
-        // Maneja la solicitud de eliminación (DELETE)
+        // Maneja la solicitud de eliminaciï¿½n (DELETE)
         public async Task<IActionResult> OnPostDeleteAsync(int? id)
         {
             if (id == null)
             {
-                MensajeProceso = "ERROR: No se especificó un ID para eliminar.";
+                MensajeProceso = "ERROR: No se especificï¿½ un ID para eliminar.";
                 return RedirectToPage();
             }
 
@@ -48,13 +51,13 @@ namespace AtsManager.Pages.Compras
                 // No se permite eliminar registros que vinieron por carga por lotes.
                 if (compra.CargaLoteId.HasValue)
                 {
-                    MensajeProceso = "ERROR: No puede eliminar un registro de lote desde esta vista. Use la gestión de lotes.";
+                    MensajeProceso = "ERROR: No puede eliminar un registro de lote desde esta vista. Use la gestiï¿½n de lotes.";
                     return RedirectToPage();
                 }
 
                 _db.Compras.Remove(compra);
                 await _db.SaveChangesAsync();
-                MensajeProceso = $"ÉXITO: La compra {compra.NumComprobante} ha sido eliminada correctamente.";
+                MensajeProceso = $"ï¿½XITO: La compra {compra.NumComprobante} ha sido eliminada correctamente.";
             }
             else
             {

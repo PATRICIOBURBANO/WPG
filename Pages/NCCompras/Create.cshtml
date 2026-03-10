@@ -1,0 +1,39 @@
+﻿@page
+@model AtsManager.Pages.NCCompras.CreateModel
+
+<h2>Nueva Nota de Crédito de Compras</h2>
+
+<form method="post">
+
+    <label>Clave de Acceso</label>
+    <input asp-for="Registro.ClaveAcceso" class="form-control" />
+
+    <label>Fecha Emisión</label>
+    <input asp-for="Registro.FechaEmision" type="date" class="form-control" />
+
+    <label>Fecha Autorización</label>
+    <input asp-for="Registro.FechaAutorizacion" type="datetime-local" class="form-control" />
+
+    <label>Serie</label>
+    <input asp-for="Registro.SerieComprobante" class="form-control" />
+
+    <label>Documento Modificado</label>
+    <input asp-for="Registro.NumeroDocumentoModificado" class="form-control" />
+
+    <label>RUC Emisor</label>
+    <input asp-for="Registro.RucEmisor" class="form-control" />
+
+    <label>Razón Social</label>
+    <input asp-for="Registro.RazonSocialEmisor" class="form-control" />
+
+    <label>Base sin Impuestos</label>
+    <input asp-for="Registro.ValorSinImpuestos" class="form-control" />
+
+    <label>IVA</label>
+    <input asp-for="Registro.IVA" class="form-control" />
+
+    <label>Total</label>
+    <input asp-for="Registro.Total" class="form-control" />
+
+    <button type="submit" class="btn btn-primary mt-3">Guardar Nota de Crédito</button>
+</form>

@@ -47,6 +47,24 @@
         <input type="hidden" asp-for="RegistroVenta.UsuarioCreacion" />
         <input type="hidden" asp-for="RegistroVenta.TipoComprobante" />
         
+        @* -- SECCIÓN EMPRESA -- *@
+        <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Empresa Emisora</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label asp-for="EmpresaId" class="block text-sm font-medium text-gray-700">Empresa</label>
+                    <select asp-for="EmpresaId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="0">Seleccione...</option>
+                        @foreach (var empresa in Model.Empresas)
+                        {
+                            <option value="@empresa.Id">@empresa.Ruc - @empresa.RazonSocial</option>
+                        }
+                    </select>
+                    <span asp-validation-for="EmpresaId" class="text-red-500 text-xs"></span>
+                </div>
+            </div>
+        </div>
+
         <div class="bg-indigo-50 p-4 rounded-lg">
             <h2 class="text-lg font-semibold text-indigo-800 mb-4">Período y Datos Básicos</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

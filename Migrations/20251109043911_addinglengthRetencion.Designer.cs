@@ -4,6 +4,7 @@ using AtsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AtsManager.Migrations
 {
     [DbContext(typeof(AtsDbContext))]
-    partial class AtsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251109043911_addinglengthRetencion")]
+    partial class addinglengthRetencion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,7 +48,7 @@ namespace AtsManager.Migrations
 
                     b.Property<string>("TipoArchivo")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("TipoDocumento")
                         .IsRequired()
@@ -55,6 +58,9 @@ namespace AtsManager.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Anio", "Mes", "TipoArchivo")
+                        .IsUnique();
 
                     b.ToTable("CargasLotes");
                 });
@@ -89,7 +95,7 @@ namespace AtsManager.Migrations
                     b.Property<decimal?>("BaseImpGrav")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<decimal?>("BaseImponible")
+                    b.Property<decimal>("BaseImponible")
                         .HasColumnType("decimal(18, 2)");
 
                     b.Property<decimal?>("BaseNoGraIva")
@@ -124,7 +130,7 @@ namespace AtsManager.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("FechaEmision")
+                    b.Property<DateTime?>("FechaEmision")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaRegistro")
@@ -197,10 +203,6 @@ namespace AtsManager.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("RucEmpresa")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Secuencial")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -260,104 +262,6 @@ namespace AtsManager.Migrations
                     b.ToTable("Compras");
                 });
 
-            modelBuilder.Entity("AtsManager.Models.Empresa", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Activa")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("CodEstablecimiento")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("Direccion")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("RazonSocial")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("Ruc")
-                        .IsRequired()
-                        .HasMaxLength(13)
-                        .HasColumnType("nvarchar(13)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Empresas");
-                });
-
-            modelBuilder.Entity("AtsManager.Models.NCCompra", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Anio")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ClaveAcceso")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("FechaAutorizacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaEmision")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaRegistro")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("IVA")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Mes")
-                        .HasColumnType("int");
-
-                    b.Property<string>("NumeroDocumentoModificado")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RazonSocialEmisor")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RucEmisor")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SerieComprobante")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Total")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("UsuarioCreacion")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("ValorSinImpuestos")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("NCCompras");
-                });
-
             modelBuilder.Entity("AtsManager.Models.RetencionCliente", b =>
                 {
                     b.Property<int>("Id")
@@ -374,44 +278,25 @@ namespace AtsManager.Migrations
                         .HasMaxLength(49)
                         .HasColumnType("nvarchar(49)");
 
-                    b.Property<decimal?>("BaseImpAir")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("BaseImpGrav")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<int?>("CargaLoteId")
+                    b.Property<int>("CargaLoteId")
                         .HasColumnType("int");
 
-                    b.Property<string>("CodRetAir")
+                    b.Property<string>("ClaveAccesoSustento")
                         .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasMaxLength(49)
+                        .HasColumnType("nvarchar(49)");
 
-                    b.Property<string>("DocAfectado")
-                        .IsRequired()
-                        .HasMaxLength(17)
-                        .HasColumnType("nvarchar(17)");
+                    b.Property<DateTime?>("FechaAutorizacion")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("FechaDocAfectado")
+                    b.Property<DateTime>("FechaRetencion")
                         .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaRetencion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("IdCliente")
-                        .IsRequired()
-                        .HasMaxLength(13)
-                        .HasColumnType("nvarchar(13)");
 
                     b.Property<short>("Mes")
                         .HasColumnType("smallint");
-
-                    b.Property<decimal?>("MontoIva")
-                        .HasColumnType("decimal(18, 2)");
 
                     b.Property<string>("NumRetencion")
                         .IsRequired()
@@ -423,47 +308,29 @@ namespace AtsManager.Migrations
                         .HasMaxLength(17)
                         .HasColumnType("nvarchar(17)");
 
-                    b.Property<decimal?>("PorcentajeAir")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<string>("RazonSocialCliente")
+                    b.Property<string>("RazonSocialEmisor")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
-                    b.Property<string>("RucEmpresa")
+                    b.Property<string>("RucEmisor")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)");
 
-                    b.Property<decimal?>("TotalRetencion")
-                        .HasColumnType("decimal(18, 2)");
+                    b.Property<string>("TipoComprobante")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
 
                     b.Property<string>("UsuarioCreacion")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal?>("ValRetBien10")
+                    b.Property<decimal>("ValRetIVA")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<decimal?>("ValRetIva")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValRetRenta")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValRetServ100")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValRetServ20")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValRetServ50")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValorRetBienes")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValorRetServicios")
+                    b.Property<decimal>("ValRetRenta")
                         .HasColumnType("decimal(18, 2)");
 
                     b.HasKey("Id");
@@ -471,121 +338,6 @@ namespace AtsManager.Migrations
                     b.HasIndex("CargaLoteId");
 
                     b.ToTable("RetencionesClientes");
-                });
-
-            modelBuilder.Entity("AtsManager.Models.RetencionCompra", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<short?>("Anio")
-                        .HasColumnType("smallint");
-
-                    b.Property<string>("Autorizacion")
-                        .IsRequired()
-                        .HasMaxLength(49)
-                        .HasColumnType("nvarchar(49)");
-
-                    b.Property<decimal?>("BaseImpAir")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("BaseImpGrav")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<int?>("CargaLoteId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CodRetAir")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
-
-                    b.Property<string>("DocAfectado")
-                        .IsRequired()
-                        .HasMaxLength(17)
-                        .HasColumnType("nvarchar(17)");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaDocAfectado")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaRetencion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("IdProveedor")
-                        .IsRequired()
-                        .HasMaxLength(13)
-                        .HasColumnType("nvarchar(13)");
-
-                    b.Property<short?>("Mes")
-                        .HasColumnType("smallint");
-
-                    b.Property<decimal?>("MontoIva")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<string>("NumRetencion")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("nvarchar(15)");
-
-                    b.Property<string>("NumRetencionCompleto")
-                        .IsRequired()
-                        .HasMaxLength(17)
-                        .HasColumnType("nvarchar(17)");
-
-                    b.Property<decimal?>("PorcentajeAir")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<string>("RazonSocialProveedor")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("RucEmpresa")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("TotalRetencion")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<string>("UsuarioCreacion")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("ValRetBien10")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValRetIva")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValRetRenta")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValRetServ100")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValRetServ20")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValRetServ50")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValorRetBienes")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal?>("ValorRetServicios")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CargaLoteId");
-
-                    b.ToTable("RetencionesCompras");
                 });
 
             modelBuilder.Entity("AtsManager.Models.Venta", b =>
@@ -669,10 +421,6 @@ namespace AtsManager.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("RucEmpresa")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Secuencial")
                         .HasColumnType("nvarchar(max)");
 
@@ -716,16 +464,9 @@ namespace AtsManager.Migrations
                 {
                     b.HasOne("AtsManager.Models.CargaLote", "CargaLote")
                         .WithMany()
-                        .HasForeignKey("CargaLoteId");
-
-                    b.Navigation("CargaLote");
-                });
-
-            modelBuilder.Entity("AtsManager.Models.RetencionCompra", b =>
-                {
-                    b.HasOne("AtsManager.Models.CargaLote", "CargaLote")
-                        .WithMany()
-                        .HasForeignKey("CargaLoteId");
+                        .HasForeignKey("CargaLoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("CargaLote");
                 });
@@ -734,8 +475,7 @@ namespace AtsManager.Migrations
                 {
                     b.HasOne("AtsManager.Models.CargaLote", "CargaLote")
                         .WithMany()
-                        .HasForeignKey("CargaLoteId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("CargaLoteId");
 
                     b.Navigation("CargaLote");
                 });

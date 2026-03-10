@@ -7,24 +7,35 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-
-// Asegúrate de que esta directiva esté incluida
 using System.Text;
-using AtsManager.ServicesA;
+
 
 namespace AtsManager.Pages.Reportes
 {
+
+
     public class ExportarModel : PageModel
     {
+
         private readonly AtsDbContext _db;
         private readonly ATSXmlGenerator _xmlGenerator;
 
-        // Propiedades para la selección del período por el usuario
         [BindProperty]
         public int Anio { get; set; } = DateTime.Now.Year;
 
         [BindProperty]
         public int Mes { get; set; } = DateTime.Now.Month;
+
+        [BindProperty]
+        public int? EmpresaId { get; set; }
+
+        [BindProperty]
+        public string? RucOverride { get; set; }
+
+        [BindProperty]
+        public string? RazonSocialOverride { get; set; }
+
+        public List<Empresa> Empresas { get; set; } = new List<Empresa>();
 
         public string Mensaje { get; set; } = string.Empty;
 
@@ -34,38 +45,69 @@ namespace AtsManager.Pages.Reportes
             _xmlGenerator = xmlGenerator;
         }
 
-        public void OnGet()
+        public async Task OnGetAsync()
         {
             ViewData["Title"] = "Exportar Anexo Transaccional Simplificado";
+            Empresas = await _db.Empresas.Where(e => e.Activa).OrderBy(e => e.RazonSocial).ToListAsync();
         }
-
         public async Task<IActionResult> OnPostExportarAsync()
         {
+            ViewData["Title"] = "Exportar Anexo Transaccional Simplificado";
+            Empresas = await _db.Empresas.Where(e => e.Activa).OrderBy(e => e.RazonSocial).ToListAsync();
+
             if (Anio <= 2000 || Mes < 1 || Mes > 12)
             {
-                Mensaje = "ERROR: Seleccione un período fiscal válido.";
+                Mensaje = "ERROR: Seleccione un perï¿½odo fiscal vï¿½lido.";
                 return Page();
             }
 
-            var compras = await _db.Compras
-                .Where(c => c.Anio == Anio && c.Mes == Mes)
-                .ToListAsync();
+            string? rucFiltro = null;
+            if (EmpresaId.HasValue)
+            {
+                var empresa = await _db.Empresas.FindAsync(EmpresaId.Value);
+                if (empresa != null)
+                {
+                    RucOverride = empresa.Ruc;
+                    RazonSocialOverride = empresa.RazonSocial;
+                    rucFiltro = empresa.Ruc;
+                }
+            }
 
-            var ventas = await _db.Ventas
-                .Where(v => v.Anio == Anio && v.Mes == Mes)
-                .ToListAsync();
+            var comprasQuery = _db.Compras
+                .Where(c => c.Anio == Anio && c.Mes == Mes);
+
+            var ventasQuery = _db.Ventas
+                .Where(v => v.Anio == Anio && v.Mes == Mes);
+
+            if (!string.IsNullOrEmpty(rucFiltro))
+            {
+                comprasQuery = comprasQuery.Where(c => c.RucEmpresa == rucFiltro);
+                ventasQuery = ventasQuery.Where(v => v.RucEmpresa == rucFiltro);
+            }
+
+            var compras = await comprasQuery.ToListAsync();
+            var ventas = await ventasQuery.ToListAsync();
 
             if (!compras.Any() && !ventas.Any())
             {
-                Mensaje = $"ADVERTENCIA: No se encontraron registros para el período {Mes:D2}/{Anio}.";
+                Mensaje = $"ADVERTENCIA: No se encontraron registros para el perï¿½odo {Mes:D2}/{Anio}.";
                 return Page();
             }
 
-            // 1. Generar el XML como STRING (Usando el método GenerarXmlBytes)
-            byte[] fileBytes = _xmlGenerator.GenerarXmlBytes(Mes, Anio, compras, ventas);
+            byte[] fileBytes = _xmlGenerator.GenerarXmlBytes(
+                Mes,
+                Anio,
+                compras,
+                ventas,
+                RucOverride,
+                RazonSocialOverride
+            );
 
-            // 2. Devolver el XML. No hay manipulación de string, se envían los bytes directos.
-            string nombreArchivo = $"ATS{Anio}{Mes:D2}{_xmlGenerator.Ruc}.xml";
+            string rucFinal = !string.IsNullOrWhiteSpace(RucOverride)
+                ? RucOverride
+                : _xmlGenerator.Ruc;
+
+            string nombreArchivo = $"ATS{Anio}{Mes:D2}{rucFinal}.xml";
 
             return File(
                 fileBytes,
@@ -73,5 +115,6 @@ namespace AtsManager.Pages.Reportes
                 nombreArchivo
             );
         }
+
     }
 }

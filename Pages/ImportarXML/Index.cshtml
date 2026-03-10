@@ -3,11 +3,12 @@
 @using System.Globalization
 
 <script src="https://cdn.tailwindcss.com"></script>
+
 <style>
     .message-box {
         padding: 1rem;
         border-radius: 0.5rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
         font-weight: 600;
     }
 
@@ -29,42 +30,121 @@
         border-left: 5px solid #ef4444;
     }
 </style>
-
 <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
     <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
-        Carga de Documentos Electrónicos por Lotes
+        Carga de Documentos Electrónicos XML
     </h1>
 
-    <form method="post" asp-page-handler="Importar" class="mb-8 border-2 border-dashed border-indigo-300 p-6 rounded-lg bg-indigo-50">
-        <h2 class="text-lg font-semibold text-indigo-800 mb-4">Especificar Carpeta de Origen</h2>
-        <p class="text-sm text-indigo-700 mb-4">
-            El sistema buscará y procesará todos los archivos XML (`*.xml`) directamente dentro de esta ruta.
-        </p>
-        <div class="flex space-x-4 items-end">
-            <div class="flex-grow">
-                <label asp-for="RutaCarpeta" class="block text-sm font-medium text-gray-700">Ruta Absoluta de la Carpeta</label>
-                <input asp-for="RutaCarpeta" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="Ej: C:\SRI_XMLs\Recibidos" />
-                <span asp-validation-for="RutaCarpeta" class="text-red-600 text-xs"></span>
+    <!-- ================= FORM ================= -->
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+
+        <!-- Año / Mes / Tipo -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+                <label asp-for="Anio" class="block text-sm font-medium text-gray-700">Año Fiscal</label>
+                <select asp-for="Anio" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    @{
+                        var currentYear = DateTime.Now.Year;
+                        for (int i = currentYear - 5; i <= currentYear + 1; i++)
+                        {
+                            <option value="@i">@i</option>
+                        }
+                    }
+                </select>
             </div>
-            <button type="submit" class="h-10 px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 shadow-sm transition">
-                <i class="fas fa-upload mr-2"></i> Procesar e Importar Lotes
+
+            <div>
+                <label asp-for="Mes" class="block text-sm font-medium text-gray-700">Mes Fiscal</label>
+                <select asp-for="Mes" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    @for (int i = 1; i <= 12; i++)
+                    {
+                        <option value="@i">
+                            @i.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label asp-for="TipoArchivo" class="block text-sm font-medium text-gray-700">Tipo de Anexo</label>
+                <select asp-for="TipoArchivo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    <option value="XML">XML Electrónicos</option>
+                </select>
+            </div>
+        
+            <div>
+                <label asp-for="ContextoCarga" class="block text-sm font-medium text-gray-700">Origen de la carpeta</label>
+                <select asp-for="ContextoCarga" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    <option value="RECIBIDOS">Recibidos</option>
+                    <option value="EMITIDOS">Emitidos</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Recibidos: compras excepto retenciones. Emitidos: ventas excepto retenciones.</p>
+            </div>
+</div>
+
+        <!-- ================= SELECTOR DE CARPETA ================= -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                Seleccionar carpeta con XML
+            </label>
+
+            <div class="flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-indigo-300 rounded-md bg-indigo-50">
+                <div class="text-center space-y-2">
+                    <div class="text-sm text-indigo-700 font-medium">
+                        Seleccione una carpeta que contenga archivos XML
+                    </div>
+
+                    <!-- IMPORTANTE: NO asp-for -->
+                    <input type="file"
+                           name="XmlFiles"
+                           id="XmlFiles"
+                           multiple
+                           webkitdirectory
+                           directory
+                           accept=".xml"
+                           class="block mx-auto text-sm text-gray-600" />
+
+                    <p class="text-xs text-gray-500">
+                        Se procesarán todos los archivos <strong>.xml</strong> de la carpeta seleccionada
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= BOTÓN ================= -->
+        <div>
+            <button type="submit"
+                    class="w-full py-3 px-4 rounded-md text-white font-semibold bg-indigo-600 hover:bg-indigo-700 transition">
+                Procesar e Importar XML
             </button>
         </div>
     </form>
 
-    @if (Model.MensajesResultado.Any())
+    <!-- ================= MENSAJE GENERAL ================= -->
+    @if (!string.IsNullOrWhiteSpace(Model.MensajeCarga))
     {
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Resultado del Procesamiento</h2>
+        <div class="message-box mt-6 @(Model.MensajeCarga.StartsWith("❌") ? "error" : "success")">
+            @Model.MensajeCarga
+        </div>
+    }
+
+    <!-- ================= RESULTADOS ================= -->
+    @if (Model.ResultadosImportacion.Any())
+    {
+        <h2 class="text-xl font-bold text-gray-800 mt-8 mb-4">
+            Resultado del Procesamiento
+        </h2>
+
         <div class="space-y-3">
-            @foreach (var mensaje in Model.MensajesResultado)
+            @foreach (var mensaje in Model.ResultadosImportacion)
             {
-                // ✨ CORRECCIÓN APLICADA: Se eliminó el @{ y } innecesario
                 var clase = "success";
-                if (mensaje.StartsWith("ERROR", StringComparison.OrdinalIgnoreCase))
+
+                if (mensaje.StartsWith("❌"))
                 {
                     clase = "error";
                 }
-                else if (mensaje.StartsWith("ADVERTENCIA", StringComparison.OrdinalIgnoreCase) || mensaje.StartsWith("Archivos XML encontrados"))
+                else if (mensaje.StartsWith("ADVERTENCIA") || mensaje.StartsWith("Archivos XML"))
                 {
                     clase = "warning";
                 }

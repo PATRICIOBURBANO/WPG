@@ -1,0 +1,126 @@
+@page
+@model AtsManager.Pages.Reportes.IndexModel
+@using System.Globalization
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<div class="w-full px-2 py-4">
+    <h1 class="text-2xl font-extrabold text-gray-900 mb-4">Reportes por RUC</h1>
+
+    <form method="get" class="mb-4 bg-white p-4 rounded-lg shadow space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Empresa</label>
+                <select asp-for="RucEmpresa" class="w-full rounded border-gray-300 text-sm">
+                    <option value="">Seleccione empresa...</option>
+                    @foreach (var emp in Model.Empresas)
+                    {
+                        <option value="@emp.Ruc">@emp.Ruc - @emp.RazonSocial</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Año</label>
+                <select asp-for="Anio" class="w-full rounded border-gray-300 text-sm">
+                    @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 5; y--)
+                    {
+                        <option value="@y">@y</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Mes</label>
+                <select asp-for="Mes" class="w-full rounded border-gray-300 text-sm">
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        <option value="@m">@m.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700">Consultar</button>
+            <button type="submit" name="Contexto" value="RECIBIDOS" class="bg-slate-100 px-3 py-2 rounded text-sm">Recibidos</button>
+            <button type="submit" name="Contexto" value="EMITIDOS" class="bg-slate-100 px-3 py-2 rounded text-sm">Emitidos</button>
+            <button type="submit" name="TipoDocumento" value="FACTURA" class="bg-slate-100 px-3 py-2 rounded text-sm">Factura</button>
+            <button type="submit" name="TipoDocumento" value="NOTA_CREDITO" class="bg-slate-100 px-3 py-2 rounded text-sm">NC</button>
+            <button type="submit" name="TipoDocumento" value="NOTA_DEBITO" class="bg-slate-100 px-3 py-2 rounded text-sm">ND</button>
+            <button type="submit" name="TipoDocumento" value="RETENCION" class="bg-slate-100 px-3 py-2 rounded text-sm">Retención</button>
+        </div>
+    </form>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Mensaje))
+    {
+        <div class="mb-4 rounded-lg bg-yellow-50 p-4 text-yellow-800">@Model.Mensaje</div>
+    }
+
+    @if (Model.Filas.Any())
+    {
+        <form method="post" asp-page-handler="ExportarExcel" class="mb-4">
+            <input type="hidden" asp-for="RucEmpresa" />
+            <input type="hidden" asp-for="Anio" />
+            <input type="hidden" asp-for="Mes" />
+            <input type="hidden" asp-for="Contexto" />
+            <input type="hidden" asp-for="TipoDocumento" />
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">Exportar Excel</button>
+        </form>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">RUC</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base 0%</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base Grav.</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Retención</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 bg-white">
+                        @foreach (var fila in Model.Filas)
+                        {
+                            <tr>
+                                <td class="px-2 py-2 text-xs">@fila.Fecha</td>
+                                <td class="px-2 py-2 text-xs">@fila.Tipo</td>
+                                <td class="px-2 py-2 text-xs">
+                                    @if (!string.IsNullOrEmpty(fila.LinkPdf))
+                                    {
+                                        <a href="/Reportes/Index?handler=VerPdf&ruta=@Uri.EscapeDataString(fila.LinkPdf)" target="_blank" class="text-indigo-600 hover:text-indigo-900 font-medium" title="Ver PDF">@fila.Numero</a>
+                                    }
+                                    else
+                                    {
+                                        @fila.Numero
+                                    }
+                                </td>
+                                <td class="px-2 py-2 text-xs">@fila.RucRelacionado</td>
+                                <td class="px-2 py-2 text-xs">@fila.NombreRelacionado</td>
+                                <td class="px-2 py-2 text-right text-xs">@fila.Base0.ToString("N2")</td>
+                                <td class="px-2 py-2 text-right text-xs">@fila.BaseGravada.ToString("N2")</td>
+                                <td class="px-2 py-2 text-right text-xs">@fila.Iva.ToString("N2")</td>
+                                <td class="px-2 py-2 text-right text-xs">@fila.Total.ToString("N2")</td>
+                                <td class="px-2 py-2 text-right text-xs">@fila.Retencion.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="bg-gray-100 font-bold">
+                        <tr>
+                            <td colspan="5" class="px-2 py-2 text-right text-xs">TOTALES</td>
+                            <td class="px-2 py-2 text-right text-xs">@Model.TotalBase0.ToString("N2")</td>
+                            <td class="px-2 py-2 text-right text-xs">@Model.TotalBaseGrav.ToString("N2")</td>
+                            <td class="px-2 py-2 text-right text-xs">@Model.TotalIva.ToString("N2")</td>
+                            <td class="px-2 py-2 text-right text-xs">@Model.TotalTotal.ToString("N2")</td>
+                            <td class="px-2 py-2 text-right text-xs">@Model.Filas.Sum(x => x.Retencion).ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</div>

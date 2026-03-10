@@ -1,38 +1,61 @@
 ﻿using AtsManager.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AtsManager.Pages.ImportarXML
 {
     public class IndexModel : PageModel
     {
-        private readonly XmlBatchImporter _importer;
+        private readonly XmlBatchImporter _xmlBatchImporter;
+
+        public IndexModel(XmlBatchImporter xmlBatchImporter)
+        {
+            _xmlBatchImporter = xmlBatchImporter;
+        }
+
+        [BindProperty] public int Anio { get; set; }
+        [BindProperty] public int Mes { get; set; }
+        [BindProperty] public string TipoArchivo { get; set; } = "XML";
+        [BindProperty] public string ContextoCarga { get; set; } = "RECIBIDOS";
 
         [BindProperty]
-        public string RutaCarpeta { get; set; } = @"C:\SRI_XMLs\Recibidos"; // Valor por defecto sugerido
+        public List<IFormFile> XmlFiles { get; set; } = new();
 
-        public List<string> MensajesResultado { get; set; } = new List<string>();
+        public List<string> ResultadosImportacion { get; set; } = new();
+        public string? MensajeCarga { get; set; }
 
-        public IndexModel(XmlBatchImporter importer)
+        public async Task<IActionResult> OnPostAsync()
         {
-            _importer = importer;
-        }
-
-        public void OnGet()
-        {
-        }
-
-        public IActionResult OnPostImportar()
-        {
-            if (string.IsNullOrEmpty(RutaCarpeta))
+            if (XmlFiles == null || !XmlFiles.Any())
             {
-                MensajesResultado.Add("ERROR: Debe especificar la ruta de la carpeta.");
+                MensajeCarga = "No se seleccionaron archivos XML.";
                 return Page();
             }
 
-            // Llamar al servicio principal
-            MensajesResultado = _importer.ImportarDesdeCarpeta(RutaCarpeta);
+            var tempPath = Path.Combine(
+                Path.GetTempPath(),
+                $"XML_IMPORT_{Guid.NewGuid()}"
+            );
+
+            Directory.CreateDirectory(tempPath);
+
+            foreach (var file in XmlFiles)
+            {
+                if (!file.FileName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var filePath = Path.Combine(tempPath, Path.GetFileName(file.FileName));
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await file.CopyToAsync(stream);
+            }
+
+            ResultadosImportacion = _xmlBatchImporter.ImportarDesdeCarpeta(tempPath, ContextoCarga);
+            MensajeCarga = "Proceso finalizado.";
 
             return Page();
         }
