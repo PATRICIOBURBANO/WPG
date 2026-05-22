@@ -1,12 +1,15 @@
-using AtsManager.Models;
+using AtsManager.Pages.Empresas.Models;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
+using System.Data;
+using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
+using AtsManager.Services;
 
 namespace AtsManager.Pages.Reportes
 {
@@ -34,6 +37,8 @@ namespace AtsManager.Pages.Reportes
         public decimal TotalIva { get; set; }
         public decimal TotalTotal { get; set; }
 
+        private const string PdfBasePath = @"C:\descargasSRI";
+
         public ComprasModel(AtsDbContext db)
         {
             _db = db;
@@ -46,14 +51,32 @@ namespace AtsManager.Pages.Reportes
 
         private async Task CargarDatosAsync()
         {
+            var rucEmpresa = HttpContext.Session.GetString("EmpresaSeleccionada") ?? "";
+            
             Empresas = await _db.Empresas
                 .Where(e => e.Activa)
                 .OrderBy(e => e.RazonSocial)
                 .ToListAsync();
+            
+            if (!string.IsNullOrEmpty(rucEmpresa))
+            {
+                var empresa = await _db.Empresas.FirstOrDefaultAsync(e => e.Ruc == rucEmpresa);
+                if (empresa != null)
+                {
+                    EmpresaId = empresa.Id;
+                    ViewData["EmpresaNombre"] = $"{empresa.Ruc} - {empresa.RazonSocial}";
+                }
+            }
+            else if (EmpresaId == 0 && Empresas.Any())
+            {
+                EmpresaId = Empresas.First().Id;
+                ViewData["EmpresaNombre"] = $"{Empresas.First().Ruc} - {Empresas.First().RazonSocial}";
+            }
 
             var query = _db.Compras.AsQueryable();
 
-            query = query.Where(c => c.Anio == Anio);
+            if (Anio > 0)
+                query = query.Where(c => c.Anio == Anio);
 
             if (Mes > 0)
             {
@@ -159,6 +182,58 @@ namespace AtsManager.Pages.Reportes
                 "02" => "NV",
                 _ => tipo ?? ""
             };
+        }
+
+        public string GetPdfLink(Compra c)
+        {
+            if (string.IsNullOrEmpty(c.TipoComprobante) || string.IsNullOrEmpty(c.NumComprobante) || !c.FechaEmision.HasValue)
+                return string.Empty;
+
+            var tipo = GetTipoAbrev(c.TipoComprobante);
+            var tipoArchivo = tipo.ToUpper() switch
+            {
+                "FC" => "FACTURA",
+                "NC" => "NOTA_CREDITO",
+                "ND" => "NOTA_DEBITO",
+                "RF" => "RETENCION",
+                _ => tipo.ToUpper()
+            };
+
+            string secuencial = c.NumComprobante;
+
+            if (c.NumComprobante.Contains("-"))
+            {
+                var partes = c.NumComprobante.Split('-');
+                if (partes.Length >= 3)
+                {
+                    secuencial = partes[2];
+                }
+            }
+
+            string secuencialLimpio = secuencial.TrimStart('0');
+            string mes = $"{c.FechaEmision.Value:yyyy-MM}";
+            string[] carpetas = { "RECIBIDOS", "EMITIDOS" };
+
+            foreach (var carpetaBase in carpetas)
+            {
+                string carpeta = Path.Combine(PdfBasePath, c.RucEmpresa, carpetaBase, mes);
+                if (!Directory.Exists(carpeta))
+                    continue;
+
+                var archivos = Directory.GetFiles(carpeta, "*.pdf");
+
+                foreach (var archivo in archivos)
+                {
+                    string nombre = Path.GetFileName(archivo);
+                    if (nombre.StartsWith(tipoArchivo + "-"))
+                    {
+                        if (nombre.Contains("-" + secuencial + "-") || nombre.Contains("-" + secuencialLimpio + "-"))
+                            return PdfLinkHelper.GetUrl(archivo);
+                    }
+                }
+            }
+
+            return string.Empty;
         }
     }
 }

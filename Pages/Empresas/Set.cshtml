@@ -1,0 +1,25 @@
+@page "/Empresas/Set"
+@model AtsManager.Pages.Empresas.SetModel
+@{
+    Layout = null;
+    var ruc = HttpContext.Session.GetString("EmpresaSeleccionada") ?? "";
+    var returnUrl = Model.ReturnUrl ?? "/Dashboard";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0;url=@returnUrl" />
+    <title>Cambiando empresa...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="text-center">
+        <p class="text-gray-600 mb-2">Cambiando empresa...</p>
+        <p class="text-sm text-gray-400">RUC: @ruc</p>
+        <p class="text-xs text-gray-400 mt-1">Redirigiendo a: @returnUrl</p>
+        <a href="@returnUrl" class="mt-4 inline-block text-indigo-600 hover:underline text-sm">Click aqui si no redirige</a>
+    </div>
+</body>
+</html>

@@ -1,4 +1,4 @@
-﻿using AtsManager.Models;
+﻿using AtsManager.Pages.Empresas.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -45,13 +45,6 @@ namespace AtsManager.Pages.Ventas
             // Validaciones básicas que puede personalizar
             if (!ModelState.IsValid)
             {
-                return Page();
-            }
-
-            // 🚨 CRÍTICO: No se permite editar registros que fueron cargados con retenciones
-            if (Venta.CargaLoteId.HasValue && Venta.CargaLoteId.Value > 0)
-            {
-                MensajeProceso = "⚠️ No se permite editar registros de Ventas que tienen retención cargada por lote. Primero debe eliminar el lote de retención.";
                 return Page();
             }
 

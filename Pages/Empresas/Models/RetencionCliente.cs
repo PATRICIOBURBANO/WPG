@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace AtsManager.Models
+namespace AtsManager.Pages.Empresas.Models
 {
     public class RetencionCliente
     {
@@ -30,12 +30,18 @@ namespace AtsManager.Models
         // Fecha de la retención
         public DateTime? FechaRetencion { get; set; }
 
+        // Emisor de la retención (quien nos retiene)
+        [StringLength(13)]
+        public string RucEmisor { get; set; } = string.Empty;
+        [StringLength(500)]
+        public string RazonSocialEmisor { get; set; } = string.Empty;
+
         // Documento que afecta (factura)
         [StringLength(17)]
         public string DocAfectado { get; set; } = string.Empty;
         public DateTime? FechaDocAfectado { get; set; }
 
-        // Cliente
+        // Cliente (quien recibe la retención - nuestra empresa)
         [StringLength(13)]
         public string IdCliente { get; set; } = string.Empty;
         [StringLength(500)]
@@ -46,6 +52,10 @@ namespace AtsManager.Models
         public decimal? BaseImpGrav { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? MontoIva { get; set; }
+
+        // Porcentaje Retención IVA
+        [Column(TypeName = "decimal(18, 2)")]
+        public decimal? PorcentajeIva { get; set; }
 
         // Base Renta
         [Column(TypeName = "decimal(18, 2)")]
@@ -68,7 +78,7 @@ namespace AtsManager.Models
         public decimal? ValRetIva { get; set; }
 
         // Retención Renta
-        [StringLength(3)]
+        [StringLength(10)]
         public string CodRetAir { get; set; } = "332";
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? PorcentajeAir { get; set; }

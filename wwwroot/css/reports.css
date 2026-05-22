@@ -1,0 +1,8 @@
+/* Simple, consistent styling for reports across the app */
+.report-card { background: white; border-radius: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.05); padding: 1rem; margin-bottom: 1rem; }
+.report-title { font-weight: 700; font-size: 1.125rem; color: #374151; margin-bottom: 0.5rem; }
+.report-table { width: 100%; border-collapse: collapse; }
+.report-table th, .report-table td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; font-size: 0.875rem; }
+.report-table thead { background: #f8fafc; }
+.report-table tr:hover td { background: #f3f4f6; }
+.report-total { font-weight: 700; }

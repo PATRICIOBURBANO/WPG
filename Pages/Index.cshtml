@@ -1,64 +1,8 @@
-﻿@page
-@model IndexModel
+@page
 @{
-    ViewData["Title"] = "Inicio - Dashboard"; // Añadido o confirmado para prevenir NullReferenceException en el Layout.
+    ViewData["Title"] = "Redirecting...";
 }
-<script src="https://cdn.tailwindcss.com"></script>
-
-<div class="py-10">
-    <header class="mb-10">
-        <h1 class="text-4xl font-extrabold text-gray-900">Bienvenido a ATS Manager</h1>
-        <p class="mt-2 text-lg text-gray-600">Su herramienta para la gestión y generación del Anexo Transaccional Simplificado (ATS) para el SRI.</p>
-    </header>
-
-    <!-- Sección de Pasos Principales -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-        <!-- Tarjeta 1: Carga de Datos -->
-        <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:shadow-xl transition duration-300">
-            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 text-blue-600 mb-4">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-            </div>
-            <h2 class="text-xl font-semibold text-gray-800 mb-3">1. Cargar Lotes (CSV/TXT)</h2>
-            <p class="text-gray-600 mb-4">Importe masivamente sus registros de Compras, Ventas y Retenciones para un período específico.</p>
-            <a asp-page="/Cargas/Index" class="inline-flex items-center text-blue-600 font-medium hover:text-blue-800">
-                Ir a Carga de Lotes &rarr;
-            </a>
-        </div>
-
-        <!-- Tarjeta 2: Gestión Manual (CRUD) -->
-        <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:shadow-xl transition duration-300">
-            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 mb-4">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-            </div>
-            <h2 class="text-xl font-semibold text-gray-800 mb-3">2. Revisar y Corregir Datos</h2>
-            <p class="text-gray-600 mb-4">Use la gestión manual (CRUD) para editar, agregar o eliminar comprobantes individualmente.</p>
-            <div class="space-x-4">
-                <a asp-page="/Compras/Index" class="text-indigo-600 font-medium hover:text-indigo-800">Compras &rarr;</a>
-                <a asp-page="/Ventas/Index" class="text-indigo-600 font-medium hover:text-indigo-800">Ventas &rarr;</a>
-            </div>
-        </div>
-
-        <!-- Tarjeta 3: Generación Final -->
-        <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:shadow-xl transition duration-300">
-            <div class="flex items-center justify-center h-12 w-12 rounded-full bg-green-100 text-green-600 mb-4">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-            </div>
-            <h2 class="text-xl font-semibold text-gray-800 mb-3">3. Generar Archivo ATS</h2>
-            <p class="text-gray-600 mb-4">Seleccione el período y exporte el archivo XML final listo para ser enviado al DIMM del SRI.</p>
-            <a asp-page="/Reportes/Exportar" class="inline-flex items-center text-green-600 font-medium hover:text-green-800">
-                Ir a Exportar ATS &rarr;
-            </a>
-        </div>
-    </div>
-
-    <div class="mt-12 p-8 bg-indigo-50 rounded-xl border border-indigo-200">
-        <h3 class="text-2xl font-bold text-indigo-800 mb-4">Resumen de Estado</h3>
-        <p class="text-indigo-700">Aquí se mostrará un resumen dinámico de los anexos cargados para el mes actual, una vez que la lógica de reportes esté implementada.</p>
-        <ul class="list-disc list-inside mt-4 text-indigo-700">
-            <li>Última Carga de Compras: (Pendiente)</li>
-            <li>Última Carga de Ventas: (Pendiente)</li>
-            <li>Registros de Compra Manuales: (Pendiente)</li>
-        </ul>
-    </div>
-</div>
+<script>
+    window.location.href = "/Dashboard";
+</script>
+<p>Redirigiendo al Dashboard...</p>

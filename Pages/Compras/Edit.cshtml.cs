@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using AtsManager.Models;
+using AtsManager.Pages.Empresas.Models;
 
 namespace AtsManager.Pages.Compras
 {
-    // Clase para el CRUD de edición
-    public class EditModel : PageModel
+    // Clase para el CRUD de ediciï¿½n
+    public class EditModel : AtsManager.Pages.ReportBasePageModel
     {
         private readonly AtsDbContext _db;
 
@@ -14,11 +14,11 @@ namespace AtsManager.Pages.Compras
         [BindProperty]
         public Compra RegistroCompra { get; set; }
 
-        // Datos para los campos de selección (Tipo ID y Comprobante)
+        // Datos para los campos de selecciï¿½n (Tipo ID y Comprobante)
         public List<string> TiposId { get; set; } = new List<string> { "01", "02", "03", "07", "08" };
         public List<string> TiposComprobante { get; set; } = new List<string> { "01", "04", "05", "41" };
 
-        public EditModel(AtsDbContext context)
+        public EditModel(AtsDbContext context, AtsManager.Services.ICurrentCompanyService currentCompany) : base(currentCompany)
         {
             _db = context;
         }
@@ -26,6 +26,7 @@ namespace AtsManager.Pages.Compras
         // Recupera el registro existente por ID
         public async Task<IActionResult> OnGetAsync(int? id)
         {
+            await LoadCurrentCompanyAsync();
             if (id == null)
             {
                 return NotFound();
@@ -43,15 +44,15 @@ namespace AtsManager.Pages.Compras
             return Page();
         }
 
-        // Procesa la actualización del formulario
+        // Procesa la actualizaciï¿½n del formulario
         public async Task<IActionResult> OnPostAsync()
         {
-            // Remover las validaciones del objeto CargaLote (no aplica a edición manual)
+            // Remover las validaciones del objeto CargaLote (no aplica a ediciï¿½n manual)
             ModelState.Remove("RegistroCompra.CargaLote");
 
             if (!ModelState.IsValid)
             {
-                // Si la validación falla, regresa a la página para mostrar errores
+                // Si la validaciï¿½n falla, regresa a la pï¿½gina para mostrar errores
                 return Page();
             }
 
@@ -60,7 +61,7 @@ namespace AtsManager.Pages.Compras
                 // Adjunta el registro al contexto y marca el estado como Modificado
                 _db.Attach(RegistroCompra).State = EntityState.Modified;
 
-                // 1. Asegurar que los campos de Lote no se modifiquen en una edición manual
+                // 1. Asegurar que los campos de Lote no se modifiquen en una ediciï¿½n manual
                 _db.Entry(RegistroCompra).Property(x => x.CargaLoteId).IsModified = false;
                 _db.Entry(RegistroCompra).Property(x => x.FechaCreacion).IsModified = false;
                 _db.Entry(RegistroCompra).Property(x => x.UsuarioCreacion).IsModified = false;

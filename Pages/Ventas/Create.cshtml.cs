@@ -2,17 +2,17 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using AtsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Threading.Tasks;
+using AtsManager.Pages.Empresas.Models;
 
 namespace AtsManager.Pages.Ventas
 {
-    public class CreateVentaModel : PageModel
+    public class CreateVentaModel : AtsManager.Pages.ReportBasePageModel
     {
         private readonly AtsDbContext _db;
 
@@ -35,38 +35,38 @@ namespace AtsManager.Pages.Ventas
         public List<string> TiposId { get; set; } = new List<string> { "04", "05", "06", "07", "08" };
         public List<string> TiposComprobante { get; set; } = new List<string> { "18", "41", "07" };
 
-        public CreateVentaModel(AtsDbContext context)
+        public CreateVentaModel(AtsDbContext context, AtsManager.Services.ICurrentCompanyService currentCompany) : base(currentCompany)
         {
             _db = context;
         }
 
+        [BindProperty(SupportsGet = true)]
+        public string? Tipo { get; set; }
+
         public async Task<IActionResult> OnGetAsync()
         {
             Empresas = await _db.Empresas.Where(e => e.Activa).OrderBy(e => e.RazonSocial).ToListAsync();
+            await LoadCurrentCompanyAsync();
+            if (EmpresaId <= 0 && !string.IsNullOrWhiteSpace(CurrentRuc))
+            {
+                var emp = Empresas.FirstOrDefault(e => e.Ruc == CurrentRuc);
+                if (emp != null) EmpresaId = emp.Id;
+            }
             
             if (RegistroVenta.Id == 0)
             {
-                RegistroVenta = new Venta
+                string tipoComp = Tipo switch
                 {
-                    FechaEmision = DateTime.Now.Date,
-                    TipoComprobante = "18",
-                    TipoIdCliente = "04",
-                    Anio = (short)DateTime.Now.Year,
-                    Mes = (short)DateTime.Now.Month
+                    "01" => "01",
+                    "04" => "04",
+                    "05" => "05",
+                    _ => "01"
                 };
-            }
-            ViewData["Title"] = "Ingreso de Nueva Venta";
-            return Page();
-        }
-
-        public IActionResult OnGet()
-        {
-            if (RegistroVenta.Id == 0)
-            {
+                
                 RegistroVenta = new Venta
                 {
                     FechaEmision = DateTime.Now.Date,
-                    TipoComprobante = "18",
+                    TipoComprobante = tipoComp,
                     TipoIdCliente = "04",
                     Anio = (short)DateTime.Now.Year,
                     Mes = (short)DateTime.Now.Month
@@ -99,8 +99,8 @@ namespace AtsManager.Pages.Ventas
                     // 2. TIPO DE COMPROBANTE (Posici�n 8, 2 d�gitos)
                     string tipoComprobante = AutorizacionInput.Substring(8, 2);
 
-                    // 3. RUC PROVEEDOR/CLIENTE (Posici�n 10, 13 d�gitos)
-                    string rucCliente = AutorizacionInput.Substring(10, 13);
+                    // 3. RUC EMISOR (Posici�n 10, 13 d�gitos) - RUC de quien emite el comprobante
+                    string rucEmisor = AutorizacionInput.Substring(10, 13);
 
                     // 4. SERIE (Posici�n 23, 6 d�gitos: EEEPPP)
                     string serieCompleta = AutorizacionInput.Substring(23, 6);
@@ -116,9 +116,14 @@ namespace AtsManager.Pages.Ventas
                     RegistroVenta.Mes = (short)fechaEmision.Month;
                     RegistroVenta.FechaEmision = fechaEmision;
 
-                    // RUC y Tipo ID
-                    RegistroVenta.IdCliente = rucCliente;
-                    RegistroVenta.TipoIdCliente = "04"; // Asumimos RUC
+                    // Buscar raz�n social del cliente por RUC
+                    var cliente = _db.Empresas.FirstOrDefault(e => e.Ruc == rucEmisor);
+                    RegistroVenta.IdCliente = rucEmisor;
+                    RegistroVenta.TipoIdCliente = "04";
+                    if (cliente != null)
+                    {
+                        RegistroVenta.RazonSocialCliente = cliente.RazonSocial;
+                    }
 
                     // Comprobante
                     RegistroVenta.TipoComprobante = tipoComprobante;
@@ -132,7 +137,6 @@ namespace AtsManager.Pages.Ventas
                 }
             }
 
-            // Regresar a la vista para que el usuario complete el formulario
             return Page();
         }
 
@@ -142,7 +146,14 @@ namespace AtsManager.Pages.Ventas
             ModelState.Remove("RegistroVenta.CargaLote");
             ModelState.Remove("RegistroVenta.CargaLoteId");
 
+            await LoadCurrentCompanyAsync();
             Empresas = await _db.Empresas.Where(e => e.Activa).OrderBy(e => e.RazonSocial).ToListAsync();
+
+            if (EmpresaId <= 0 && !string.IsNullOrWhiteSpace(CurrentRuc))
+            {
+                var emp = Empresas.FirstOrDefault(e => e.Ruc == CurrentRuc);
+                if (emp != null) EmpresaId = emp.Id;
+            }
 
             if (EmpresaId <= 0)
             {

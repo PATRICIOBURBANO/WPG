@@ -1,92 +1,212 @@
-﻿@page
+@page
 @model AtsManager.Pages.Retenciones.IndexModel
 @using System.Globalization
 
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <div class="max-w-7xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-extrabold text-gray-900">Listado de Retenciones de Clientes</h1>
-        @* Adaptar el botón para la acción de Retenciones, si aplica **@
-        <a asp-page="Create" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Nueva Retención Manual
-        </a>
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-percentage text-purple-600 mr-3"></i>
+                    Retenciones de Clientes
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">Retenciones emitidas a clientes</p>
+            </div>
+            <div class="flex gap-3">
+                <a asp-page="/Dashboard" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium transition-colors">
+                    <i class="fas fa-home mr-2"></i>Dashboard
+                </a>
+                <a asp-page="Create" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium shadow-sm transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Nuevo
+                </a>
+            </div>
+        </div>
     </div>
 
-    @* Mostrar mensaje de éxito/error (Si usa MensajeProceso en el modelo de Retenciones) *@
+    <!-- Mensaje -->
     @if (!string.IsNullOrEmpty(Model.MensajeProceso))
     {
-        <div class="p-4 rounded-lg border-l-4 mb-6 font-semibold @(Model.MensajeProceso.StartsWith("ERROR") ? "bg-red-100 text-red-800 border-red-500" : "bg-green-100 text-green-800 border-green-500")">
-            @Model.MensajeProceso
+        <div class="mb-4 p-4 rounded-lg border-l-4 @(Model.MensajeProceso.StartsWith("ERROR") ? "bg-red-100 text-red-800 border-red-500" : "bg-green-100 text-green-800 border-green-500")">
+            <div class="flex items-center">
+                <i class="fas @(Model.MensajeProceso.StartsWith("ERROR") ? "fa-exclamation-circle text-red-500" : "fa-check-circle text-green-500") mr-2"></i>
+                @Model.MensajeProceso
+            </div>
         </div>
     }
 
-    <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Período</th>
-                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">No. Retención</th>
-                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Doc. Afectado</th>
-                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">RUC</th>
-                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base IVA</th>
-                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Ret. IVA</th>
-                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base Rita</th>
-                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">% Air</th>
-                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Ret. Renta</th>
-                    <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @foreach (var item in Model.Retenciones)
-                {
-                    <tr>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">
-                            @item.Anio/@item.Mes.ToString("00")
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                            @(item.FechaRetencion?.ToString("dd/MM/yyyy") ?? "-")
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                            @item.NumRetencionCompleto
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                            @item.DocAfectado
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                            @item.IdCliente
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                            @item.RazonSocialCliente
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900">
-                            @((item.BaseImpGrav ?? 0).ToString("N2", CultureInfo.InvariantCulture))
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-red-600 font-medium">
-                            @((item.ValRetIva ?? 0).ToString("N2", CultureInfo.InvariantCulture))
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900">
-                            @((item.BaseImpAir ?? 0).ToString("N2", CultureInfo.InvariantCulture))
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-500">
-                            @((item.PorcentajeAir ?? 0).ToString("N1"))
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-red-600 font-medium">
-                            @((item.ValRetRenta ?? 0).ToString("N2", CultureInfo.InvariantCulture))
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right font-bold text-gray-900">
-                            @((item.TotalRetencion ?? 0).ToString("N2", CultureInfo.InvariantCulture))
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
+    <!-- Tabla -->
+    @if (Model.Retenciones != null && Model.Retenciones.Any())
+    {
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto" style="max-height: 600px; overflow-y: auto;">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <i class="fas fa-file-pdf mr-1"></i>PDF
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?SortField=Periodo&SortOrder=@(Model.SortField=="Periodo" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                <i class="fas fa-calendar mr-1"></i>Período <i class="@Model.GetSortIcon("Periodo")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?SortField=Fecha&SortOrder=@(Model.SortField=="Fecha" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                <i class="fas fa-calendar-day mr-1"></i>Fecha <i class="@Model.GetSortIcon("Fecha")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?SortField=Numero&SortOrder=@(Model.SortField=="Numero" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                <i class="fas fa-hashtag mr-1"></i>No. Retención <i class="@Model.GetSortIcon("Numero")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?SortField=DocAfectado&SortOrder=@(Model.SortField=="DocAfectado" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                <i class="fas fa-exchange-alt mr-1"></i>Doc. Afectado <i class="@Model.GetSortIcon("DocAfectado")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?SortField=Cliente&SortOrder=@(Model.SortField=="Cliente" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                <i class="fas fa-building mr-1"></i>Cliente <i class="@Model.GetSortIcon("Cliente")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?SortField=BaseIva&SortOrder=@(Model.SortField=="BaseIva" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                Base IVA <i class="@Model.GetSortIcon("BaseIva")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">% IVA</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?SortField=RetIva&SortOrder=@(Model.SortField=="RetIva" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                Ret. IVA <i class="@Model.GetSortIcon("RetIva")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?SortField=BaseRenta&SortOrder=@(Model.SortField=="BaseRenta" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                Base Renta <i class="@Model.GetSortIcon("BaseRenta")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">% Air</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ret. Renta</th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <i class="fas fa-dollar-sign mr-1"></i>Total
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach (var item in Model.Retenciones)
+                        {
+                            var pdfPath = Model.GetPdfLink(item);
+                            <tr class="hover:bg-purple-50 transition-colors">
+                                <td class="px-3 py-3 whitespace-nowrap text-center">
+                                    @if (!string.IsNullOrEmpty(pdfPath))
+                                    {
+                                        <a href="@pdfPath" target="_blank" 
+                                           class="text-indigo-600 hover:text-indigo-800" title="Abrir PDF">
+                                            <i class="fas fa-file-pdf text-red-500 text-lg"></i>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-gray-300"><i class="fas fa-file-pdf"></i></span>
+                                    }
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
+                                    @item.Anio/@item.Mes.ToString("00")
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
+                                    @(item.FechaRetencion?.ToString("dd/MM/yyyy") ?? "-")
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm font-medium text-indigo-600">
+                                    @if (!string.IsNullOrEmpty(pdfPath))
+                                    {
+                                        <a href="@pdfPath" target="_blank" class="flex items-center hover:text-indigo-800">
+                                            <i class="fas fa-file-pdf text-red-500 mr-2"></i>@item.NumRetencionCompleto
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        @item.NumRetencionCompleto
+                                    }
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-600">
+                                    @{
+                                        var docPdfPath = Model.GetDocAfectadoPdfLink(item);
+                                        var docNum = item.DocAfectado ?? "-";
+                                    }
+                                    @if (!string.IsNullOrEmpty(docPdfPath))
+                                    {
+                                        <a href="@docPdfPath" target="_blank" class="flex items-center text-indigo-600 hover:text-indigo-800 font-medium">
+                                            <i class="fas fa-file-invoice text-blue-500 mr-1"></i>@docNum
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        @docNum
+                                    }
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900 font-medium">@(item.RazonSocialCliente ?? "-")</div>
+                                    <div class="text-xs text-gray-500">@(item.IdCliente ?? "-")</div>
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                                    @((item.BaseImpGrav ?? 0).ToString("N2"))
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center text-gray-500">
+                                    @((item.PorcentajeIva ?? 0).ToString("N0"))%
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-red-600 font-medium">
+                                    @((item.ValRetIva ?? 0).ToString("N2"))
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                                    @((item.BaseImpAir ?? 0).ToString("N2"))
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-center text-gray-500">
+                                    @((item.PorcentajeAir ?? 0).ToString("N1"))%
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-red-600 font-medium">
+                                    @((item.ValRetRenta ?? 0).ToString("N2"))
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-right font-bold text-gray-900">
+                                    @((item.TotalRetencion ?? 0).ToString("N2"))
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <!-- Totales -->
+                    <tfoot class="bg-gray-100">
+                        <tr>
+                            <td colspan="6" class="px-3 py-3 text-right font-bold text-gray-700">TOTALES:</td>
+                            <td class="px-3 py-3 text-right font-bold text-gray-900">
+                                @Model.Retenciones.Sum(x => x.BaseImpGrav ?? 0).ToString("N2")
+                            </td>
+                            <td class="px-3 py-3 text-right font-bold text-red-600">
+                                @Model.Retenciones.Sum(x => x.ValRetIva ?? 0).ToString("N2")
+                            </td>
+                            <td class="px-3 py-3 text-right font-bold text-gray-900">
+                                @Model.Retenciones.Sum(x => x.BaseImpAir ?? 0).ToString("N2")
+                            </td>
+                            <td></td>
+                            <td class="px-3 py-3 text-right font-bold text-red-600">
+                                @Model.Retenciones.Sum(x => x.ValRetRenta ?? 0).ToString("N2")
+                            </td>
+                            <td class="px-3 py-3 text-right font-bold text-purple-700 text-lg">
+                                @Model.Retenciones.Sum(x => x.TotalRetencion ?? 0).ToString("N2")
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
 
-@section Scripts {
-    <script>
-        // Scripts adicionales aquí si son necesarios
-    </script>
-}
+        <!-- Resumen -->
+        <div class="mt-4 flex justify-between items-center text-sm text-gray-600">
+            <div class="flex items-center">
+                <i class="fas fa-database mr-2"></i>
+                Total: <strong class="ml-1">@Model.Retenciones.Count</strong> registros
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Vacío -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                <i class="fas fa-percentage text-3xl text-gray-400"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No hay retenciones de clientes registradas</h3>
+            <p class="text-gray-500 mb-6">Descargue las retenciones desde el SRI para verlas aquí.</p>
+            <a asp-page="/Descargas/Index" class="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                <i class="fas fa-download mr-2"></i>Descargar SRI
+            </a>
+        </div>
+    }
+</div>

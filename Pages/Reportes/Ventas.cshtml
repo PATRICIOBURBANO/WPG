@@ -5,9 +5,28 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <div class="w-full px-2 py-4">
-    <h1 class="text-2xl font-extrabold text-gray-900 mb-4">Reporte de Ventas</h1>
+    <h1 class="text-2xl font-extrabold text-gray-900 mb-4">Reportes de Ventas y Retenciones</h1>
     
+    <!-- Tabs para seleccionar tipo de reporte -->
+    <div class="mb-4 border-b border-gray-200">
+        <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="reportTabs" role="tablist">
+            <li class="mr-2" role="presentation">
+                <button class="inline-block p-4 border-b-2 rounded-t-lg @(Model.VerRetenciones ? "" : "border-indigo-600 text-indigo-600")" 
+                        id="ventas-tab" onclick="switchTab('ventas')">
+                    Ventas
+                </button>
+            </li>
+            <li class="mr-2" role="presentation">
+                <button class="inline-block p-4 border-b-2 rounded-t-lg @(Model.VerRetenciones ? "border-indigo-600 text-indigo-600" : "border-transparent hover:text-gray-600 hover:border-gray-300")" 
+                        id="retenciones-tab" onclick="switchTab('retenciones')">
+                    Retenciones Recibidas
+                </button>
+            </li>
+        </ul>
+    </div>
+
     <form method="get" class="mb-4 bg-white p-4 rounded-lg shadow">
+        <input type="hidden" name="verRetenciones" value="@(Model.VerRetenciones ? "true" : "false")" id="verRetencionesInput" />
         <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
                 <label class="block text-xs font-medium text-gray-700">Año</label>
@@ -28,16 +47,13 @@
                     }
                 </select>
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-700">Empresa</label>
-                <select name="empresaId" class="w-full rounded border-gray-300 text-sm">
-                    <option value="0">Todas</option>
-                    @foreach (var e in Model.Empresas)
-                    {
-                        <option value="@e.Id" selected="@(e.Id == Model.EmpresaId)">@e.Ruc - @e.RazonSocial</option>
-                    }
-                </select>
+            <div class="flex items-center bg-gray-100 rounded px-3 py-2">
+                <span class="text-xs font-medium text-gray-500 mr-2">Empresa:</span>
+                <span class="text-sm font-bold text-gray-800">@ViewData["EmpresaNombre"]</span>
             </div>
+            <input type="hidden" name="empresaId" value="@Model.EmpresaId" />
+            @if (!Model.VerRetenciones)
+            {
             <div>
                 <label class="block text-xs font-medium text-gray-700">Tipo</label>
                 <select name="tipo" class="w-full rounded border-gray-300 text-sm">
@@ -48,12 +64,112 @@
                     <option value="07" selected="@(Model.Tipo == "07")">Retención</option>
                 </select>
             </div>
+            }
             <div class="flex items-end">
                 <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700">Filtrar</button>
             </div>
         </div>
     </form>
 
+    <script>
+        function switchTab(tab) {
+            document.getElementById('verRetencionesInput').value = tab === 'retenciones' ? 'true' : 'false';
+            document.querySelector('form').submit();
+        }
+    </script>
+
+    @if (Model.VerRetenciones)
+    {
+        <!-- REPORTE DE RETENCIONES RECIBIDAS -->
+        @if (Model.RetencionesClientes.Any())
+        {
+            <form method="post" asp-page-handler="ExportarExcelRetenciones" class="mb-4">
+                <input type="hidden" name="anio" value="@Model.Anio" />
+                <input type="hidden" name="mes" value="@Model.Mes" />
+                <input type="hidden" name="empresaId" value="@Model.EmpresaId" />
+                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">Exportar Excel</button>
+            </form>
+            
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="overflow-x-auto" style="max-height: 500px; overflow-y: auto;">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">Período</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">No. Retención</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doc. Afectado</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">RUC Emisor</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre Emisor</th>
+                                <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase">Base IVA</th>
+                                <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase">% IVA</th>
+                                <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ret. IVA</th>
+                                <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase">Base Renta</th>
+                                <th class="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">% Air</th>
+                                <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ret. Renta</th>
+                                <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                <th class="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cod.</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach (var r in Model.RetencionesClientes)
+                            {
+                                var pdfPath = Model.GetPdfLink(r);
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs">@r.Anio/@r.Mes.ToString("00")</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs">@(r.FechaRetencion?.ToString("dd/MM/yy") ?? "-")</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs">
+                                        @if (!string.IsNullOrEmpty(pdfPath))
+                                        {
+                                            <a href="@pdfPath" target="_blank" class="text-indigo-600 hover:text-indigo-900 font-medium" title="Abrir PDF">@r.NumRetencionCompleto</a>
+                                        }
+                                        else
+                                        {
+                                            @r.NumRetencionCompleto
+                                        }
+                                    </td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs">@(string.IsNullOrWhiteSpace(r.DocAfectado) ? "0000000000" : r.DocAfectado)</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs">@r.RucEmisor</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs">@r.RazonSocialEmisor</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs text-right">@((r.BaseImpGrav ?? 0).ToString("N2"))</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs text-center">@((r.PorcentajeIva ?? 0).ToString("N0"))%</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-red-600 font-medium">@((r.ValRetIva ?? 0).ToString("N2"))</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs text-right">@((r.BaseImpAir ?? 0).ToString("N2"))</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs text-center">@((r.PorcentajeAir ?? 0).ToString("N1"))%</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-red-600 font-medium">@((r.ValRetRenta ?? 0).ToString("N2"))</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs text-right font-bold">@(((r.ValRetIva ?? 0) + (r.ValRetRenta ?? 0)).ToString("N2"))</td>
+                                    <td class="px-2 py-2 whitespace-nowrap text-xs text-center">@r.CodRetAir</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="bg-gray-100 font-bold sticky bottom-0 z-10">
+                            <tr>
+                                <td colspan="6" class="px-2 py-2 text-right text-xs">TOTALES:</td>
+                                <td class="px-2 py-2 text-right text-xs">@Model.TotalBaseIvaRet.ToString("N2")</td>
+                                <td class="px-2 py-2 text-right text-xs">@Model.TotalRetIva.ToString("N2")</td>
+                                <td class="px-2 py-2 text-right text-xs">@Model.TotalBaseRentaRet.ToString("N2")</td>
+                                <td class="px-2 py-2 text-center text-xs"></td>
+                                <td class="px-2 py-2 text-right text-xs">@Model.TotalRetRenta.ToString("N2")</td>
+                                <td class="px-2 py-2 text-right text-xs">@((Model.TotalRetIva + Model.TotalRetRenta).ToString("N2"))</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-600">
+                Total registros: @Model.RetencionesClientes.Count | Total Ret. IVA: @Model.TotalRetIva.ToString("N2") | Total Ret. Renta: @Model.TotalRetRenta.ToString("N2")
+            </div>
+        }
+        else
+        {
+            <div class="bg-yellow-50 p-4 rounded-lg text-yellow-800">No hay retenciones para los filtros seleccionados.</div>
+        }
+    }
+    else
+    {
+        <!-- REPORTE DE VENTAS -->
     @if (Model.Ventas.Any())
     {
         <form method="post" asp-page-handler="ExportarExcel" class="mb-4">
@@ -65,28 +181,38 @@
         </form>
         
         <div class="bg-white rounded-lg shadow overflow-hidden">
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto" style="max-height: 500px; overflow-y: auto;">
                 <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+                    <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">RUC</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base 0%</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base 12%/15%</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RUC</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                            <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Base 0%</th>
+                            <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Base 12%/15%</th>
+                            <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
+                            <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @foreach (var v in Model.Ventas)
                         {
+                            var pdfPath = Model.GetPdfLink(v);
                             <tr class="hover:bg-gray-50">
                                 <td class="px-2 py-2 whitespace-nowrap text-xs">@v.FechaEmision?.ToString("dd/MM/yy")</td>
                                 <td class="px-2 py-2 whitespace-nowrap text-xs">@VentasModel.GetTipoAbrev(v.TipoComprobante)</td>
-                                <td class="px-2 py-2 whitespace-nowrap text-xs">@v.NumComprobante</td>
+                                <td class="px-2 py-2 whitespace-nowrap text-xs">
+                                    @if (!string.IsNullOrEmpty(pdfPath))
+                                    {
+                                        <a href="@pdfPath" target="_blank" class="text-indigo-600 hover:text-indigo-900 font-medium" title="Abrir PDF">@v.NumComprobante</a>
+                                    }
+                                    else
+                                    {
+                                        @v.NumComprobante
+                                    }
+                                </td>
                                 <td class="px-2 py-2 whitespace-nowrap text-xs">@v.IdCliente</td>
                                 <td class="px-2 py-2 whitespace-nowrap text-xs">@v.RazonSocialCliente</td>
                                 <td class="px-2 py-2 whitespace-nowrap text-xs text-right">@v.BaseImponible.GetValueOrDefault().ToString("N2")</td>
@@ -96,7 +222,7 @@
                             </tr>
                         }
                     </tbody>
-                    <tfoot class="bg-gray-100 font-bold">
+                    <tfoot class="bg-gray-100 font-bold sticky bottom-0 z-10">
                         <tr>
                             <td colspan="5" class="px-2 py-2 text-right text-xs">TOTALES:</td>
                             <td class="px-2 py-2 text-right text-xs">@Model.TotalBase0.ToString("N2")</td>
@@ -113,8 +239,5 @@
             Total registros: @Model.Ventas.Count | Total Base 0%: @Model.TotalBase0.ToString("N2") | Total Base Gravada: @Model.TotalBaseGrav.ToString("N2") | Total IVA: @Model.TotalIva.ToString("N2") | Total: @Model.TotalTotal.ToString("N2")
         </div>
     }
-    else
-    {
-        <div class="bg-yellow-50 p-4 rounded-lg text-yellow-800">No hay registros para los filtros seleccionados.</div>
     }
 </div>

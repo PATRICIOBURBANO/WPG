@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using AtsManager.Models;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
+using AtsManager.Pages.Empresas.Models;
 
 namespace AtsManager.Pages.Empresas
 {
@@ -63,6 +64,91 @@ namespace AtsManager.Pages.Empresas
             return Page();
         }
 
+        public async Task<IActionResult> OnPostImportarFromPythonAsync()
+        {
+            var configPath = @"C:\Users\patri\Downloads\SRI\config\config.yaml";
+            if (!System.IO.File.Exists(configPath))
+            {
+                Mensaje = "ERROR: No se encontró config.yaml";
+                await OnGetAsync();
+                return Page();
+            }
+
+            var lines = System.IO.File.ReadAllLines(configPath);
+            int importadas = 0, actualizadas = 0;
+            object? current = null;
+            string? currentRuc = null, currentEmpresa = null, currentClave = null;
+            bool inRucs = false;
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+                if (trimmed.StartsWith("rucs:"))
+                {
+                    inRucs = true;
+                    continue;
+                }
+                if (!inRucs) continue;
+
+                if (trimmed.StartsWith("- ruc:"))
+                {
+                    if (currentRuc != null)
+                    {
+                        var existente = await _db.Empresas.FirstOrDefaultAsync(e => e.Ruc == currentRuc);
+                        if (existente != null)
+                        {
+                            if (!string.IsNullOrEmpty(currentClave)) existente.ClaveSRI = currentClave;
+                            if (!string.IsNullOrEmpty(currentEmpresa)) existente.RazonSocial = currentEmpresa;
+                            actualizadas++;
+                        }
+                        else
+                        {
+                            _db.Empresas.Add(new Empresa { Ruc = currentRuc, RazonSocial = currentEmpresa ?? "Sin nombre", ClaveSRI = currentClave, Activa = true });
+                            importadas++;
+                        }
+                    }
+                    var p = trimmed.IndexOf("'");
+                    currentRuc = trimmed.Substring(p + 1, trimmed.LastIndexOf("'") - p - 1).Trim();
+                    currentEmpresa = null;
+                    currentClave = null;
+                    continue;
+                }
+                if (currentRuc != null)
+                {
+                    if (trimmed.StartsWith("empresa:"))
+                    {
+                        var val = trimmed.Substring(trimmed.IndexOf(":") + 1).Trim().Trim('\'');
+                        currentEmpresa = val;
+                    }
+                    else if (trimmed.StartsWith("clave:"))
+                    {
+                        var val = trimmed.Substring(trimmed.IndexOf(":") + 1).Trim().Trim('\'');
+                        currentClave = val;
+                    }
+                }
+            }
+            if (currentRuc != null)
+            {
+                var existente = await _db.Empresas.FirstOrDefaultAsync(e => e.Ruc == currentRuc);
+                if (existente != null)
+                {
+                    if (!string.IsNullOrEmpty(currentClave)) existente.ClaveSRI = currentClave;
+                    if (!string.IsNullOrEmpty(currentEmpresa)) existente.RazonSocial = currentEmpresa;
+                    actualizadas++;
+                }
+                else
+                {
+                    _db.Empresas.Add(new Empresa { Ruc = currentRuc, RazonSocial = currentEmpresa ?? "Sin nombre", ClaveSRI = currentClave, Activa = true });
+                    importadas++;
+                }
+            }
+
+            await _db.SaveChangesAsync();
+            Mensaje = $"Importadas: {importadas} nuevas, {actualizadas} actualizadas con clave SRI.";
+            await OnGetAsync();
+            return Page();
+        }
+
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
             var empresa = await _db.Empresas.FindAsync(id);
@@ -86,6 +172,11 @@ namespace AtsManager.Pages.Empresas
                 empresa.Direccion = NuevaEmpresa.Direccion;
                 empresa.CodEstablecimiento = NuevaEmpresa.CodEstablecimiento;
                 empresa.Activa = EmpresaActiva;
+                var claveInput = NuevaEmpresa.ClaveSRI ?? "";
+                if (!string.IsNullOrEmpty(claveInput) && claveInput != "••••••••")
+                {
+                    empresa.ClaveSRI = claveInput;
+                }
                 await _db.SaveChangesAsync();
                 Mensaje = "Empresa actualizada exitosamente.";
             }

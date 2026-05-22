@@ -3,114 +3,528 @@
 @using System.Globalization
 
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
-    <h1 class="text-2xl font-extrabold text-gray-900 mb-4 border-b pb-2">
-        Descargar Documentos del SRI
-    </h1>
-    <p class="text-gray-500 mb-6">
-        Descargue comprobantes electrónicos desde el portal del SRI usando automatización.
-    </p>
-
-    @if (!string.IsNullOrEmpty(Model.Mensaje))
-    {
-        <div class="p-4 rounded-lg border-l-4 mb-4 font-semibold @(Model.Mensaje.Contains("ERROR") || Model.Mensaje.Contains("❌") ? "bg-red-100 text-red-800 border-red-500" : "bg-green-100 text-green-800 border-green-500")">
-            @Model.Mensaje
+<div class="max-w-6xl mx-auto">
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-600 to-indigo-800 px-6 py-4">
+            <h1 class="text-2xl font-bold text-white flex items-center">
+                <i class="fas fa-download mr-3"></i>Descargar Documentos del SRI
+            </h1>
+            <p class="text-indigo-200 text-sm mt-1">Seleccione las opciones de descarga y programe si lo desea</p>
         </div>
-    }
 
-    @if (Model.Ejecutando)
-    {
-        <div class="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-300">
-            <div class="flex items-center">
-                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
-                <span class="text-blue-800 font-medium">Ejecutando descarga del SRI... Por favor espere.</span>
+        @if (!string.IsNullOrEmpty(Model.Mensaje))
+        {
+            <div class="mx-6 mt-4 p-4 rounded-lg @(Model.Mensaje.Contains("ERROR") || Model.Mensaje.Contains("Error") ? "bg-red-100 text-red-800 border-l-4 border-red-500" : "bg-green-100 text-green-800 border-l-4 border-green-500")">
+                @Model.Mensaje
             </div>
-        </div>
-    }
+        }
 
-    <form method="post" class="space-y-6">
-        <div class="bg-blue-50 p-4 rounded-lg border">
-            <h2 class="text-lg font-semibold text-blue-800 mb-3">Configuración de Descarga</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label asp-for="Anio" class="block text-sm font-medium text-gray-700">Año</label>
-                    <select asp-for="Anio" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        @{
-                            var year = DateTime.Now.Year;
-                            for (int i = year; i >= year - 3; i--)
-                            {
-                                <option value="@i" selected="@(i == Model.Anio)">@i</option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div>
-                    <label asp-for="Mes" class="block text-sm font-medium text-gray-700">Mes</label>
-                    <select asp-for="Mes" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        @for (int i = 1; i <= 12; i++)
-                        {
-                            <option value="@i" selected="@(i == Model.Mes)">@i.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
-                        }
-                    </select>
-                </div>
-                <div>
-                    <label asp-for="Modo" class="block text-sm font-medium text-gray-700">Modo</label>
-                    <select asp-for="Modo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        <option value="ambos">Emitidos y Recibidos</option>
-                        <option value="emitidos">Solo Emitidos</option>
-                        <option value="recibidos">Solo Recibidos</option>
-                    </select>
-                </div>
-            </div>
-        </div>
+        <form method="post" asp-page-handler="Descargar" enctype="multipart/form-data" class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Columna Izquierda -->
+                <div class="space-y-6">
+                    
+                    <!-- Período -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-calendar-alt mr-2 text-indigo-600"></i>Período
+                        </h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Año</label>
+                                <select asp-for="Anio" class="w-full rounded-lg border-gray-300 shadow-sm">
+                                    @{
+                                        var year = DateTime.Now.Year;
+                                        for (int i = year; i >= year - 3; i--)
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+                                <select asp-for="Mes" class="w-full rounded-lg border-gray-300 shadow-sm">
+                                    @for (int i = 1; i <= 12; i++)
+                                    {
+                                        <option value="@i">@i - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
 
-        <div class="bg-gray-50 p-4 rounded-lg border">
-            <h2 class="text-lg font-semibold text-gray-800 mb-3">Empresas Configuradas</h2>
-            <p class="text-sm text-gray-600 mb-3">Empresas definidas en el archivo de configuración del SRI:</p>
-            
-            <div class="space-y-2">
-                @foreach (var emp in Model.EmpresasSRI)
-                {
-                    <div class="flex items-center p-2 bg-white rounded border">
-                        <input type="checkbox" name="EmpresasSeleccionadas" value="@emp.ruc" class="h-4 w-4 text-indigo-600 rounded" />
-                        <span class="ml-2 text-sm text-gray-700">@emp.ruc - @emp.empresa</span>
+                        <!-- Rango de Fechas Personalizado -->
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="chkRangoFechas" class="h-4 w-4 text-indigo-600 rounded" onchange="toggleRangoFechas()">
+                                <span class="ml-2 text-sm text-gray-700">Usar rango de fechas personalizado</span>
+                            </label>
+                            <div id="divRangoFechas" class="hidden mt-3 grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Desde</label>
+                                    <input type="date" id="FechaDesde" name="FechaDesde" class="w-full rounded-lg border-gray-300 shadow-sm text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Hasta</label>
+                                    <input type="date" id="FechaHasta" name="FechaHasta" class="w-full rounded-lg border-gray-300 shadow-sm text-sm">
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Tipo de Documentos -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-file-alt mr-2 text-indigo-600"></i>Tipo de Documentos
+                        </h3>
+                        
+                        <!-- Recibidos / Emitidos -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Origen</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center">
+                                    <input type="hidden" name="DescargarRecibidos" value="false">
+                                    <input type="checkbox" name="DescargarRecibidos" value="true" checked class="h-4 w-4 text-indigo-600 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">Recibidos</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="hidden" name="DescargarEmitidos" value="false">
+                                    <input type="checkbox" name="DescargarEmitidos" value="true" checked class="h-4 w-4 text-indigo-600 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">Emitidos</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Documentos -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Documentos</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="flex items-center bg-white p-2 rounded border hover:bg-indigo-50 cursor-pointer">
+                                    <input type="hidden" name="Facturas" value="false">
+                                    <input type="checkbox" name="Facturas" value="true" checked class="h-4 w-4 text-indigo-600 rounded">
+                                    <span class="ml-2 text-sm"><i class="fas fa-file-invoice text-green-600 mr-1"></i>Facturas</span>
+                                </label>
+                                <label class="flex items-center bg-white p-2 rounded border hover:bg-indigo-50 cursor-pointer">
+                                    <input type="hidden" name="NotasCredito" value="false">
+                                    <input type="checkbox" name="NotasCredito" value="true" checked class="h-4 w-4 text-indigo-600 rounded">
+                                    <span class="ml-2 text-sm"><i class="fas fa-file-alt text-orange-600 mr-1"></i>Notas Crédito</span>
+                                </label>
+                                <label class="flex items-center bg-white p-2 rounded border hover:bg-indigo-50 cursor-pointer">
+                                    <input type="hidden" name="NotasDebito" value="false">
+                                    <input type="checkbox" name="NotasDebito" value="true" checked class="h-4 w-4 text-indigo-600 rounded">
+                                    <span class="ml-2 text-sm"><i class="fas fa-file-alt text-blue-600 mr-1"></i>Notas Débito</span>
+                                </label>
+                                <label class="flex items-center bg-white p-2 rounded border hover:bg-indigo-50 cursor-pointer">
+                                    <input type="hidden" name="Retenciones" value="false">
+                                    <input type="checkbox" name="Retenciones" value="true" checked class="h-4 w-4 text-indigo-600 rounded">
+                                    <span class="ml-2 text-sm"><i class="fas fa-percent text-purple-600 mr-1"></i>Retenciones</span>
+                                </label>
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" onclick="seleccionarTodos()" class="text-xs text-indigo-600 hover:text-indigo-800">
+                                    <i class="fas fa-check-square mr-1"></i>Seleccionar todos
+                                </button>
+                                <span class="text-gray-300 mx-1">|</span>
+                                <button type="button" onclick="deseleccionarTodos()" class="text-xs text-gray-500 hover:text-gray-700">
+                                    <i class="fas fa-square mr-1"></i>Deseleccionar todos
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Importar -->
+                        <div class="pt-4 border-t border-gray-200">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="hidden" name="AutoImportar" value="false">
+                                <input type="checkbox" name="AutoImportar" value="true" checked class="h-4 w-4 text-indigo-600 rounded">
+                                <span class="ml-2 text-sm font-medium text-gray-700">Auto-importar XMLs después de descargar</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1 ml-6">
+                                Los XMLs se importarán automáticamente a la base de datos
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha -->
+                <div class="space-y-6">
+                    
+                    <!-- Editar Clave (oculto por defecto) -->
+                    <div id="divEditarClave" class="bg-gray-50 rounded-lg p-4 hidden">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-semibold text-gray-800 flex items-center">
+                                <i class="fas fa-key mr-2 text-blue-600"></i>Editar Clave SRI
+                            </h3>
+                            <button type="button" onclick="cerrarEditarClave()" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <p id="empresaEditando" class="text-xs text-gray-600 mb-3"></p>
+                        <div class="space-y-2">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Clave Actual</label>
+                                <input type="text" id="claveActual" class="w-full rounded-lg border-gray-300 shadow-sm text-sm bg-gray-100" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Nueva Clave</label>
+                                <input type="password" id="nuevaClave" placeholder="Ingrese nueva clave" class="w-full rounded-lg border-gray-300 shadow-sm text-sm">
+                            </div>
+                            <button type="button" onclick="guardarClave()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700">
+                                <i class="fas fa-save mr-2"></i>Guardar Clave
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Programar Descarga -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-clock mr-2 text-indigo-600"></i>Programar Descarga
+                        </h3>
+                        
+                        <div class="mb-4">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="chkProgramar" class="h-4 w-4 text-indigo-600 rounded" onchange="toggleProgramar()">
+                                <span class="ml-2 text-sm font-medium text-gray-700">Programar para más tarde</span>
+                            </label>
+                        </div>
+
+                        <div id="divProgramar" class="hidden space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha y Hora</label>
+                                <input type="datetime-local" id="FechaProgramada" name="FechaProgramada" class="w-full rounded-lg border-gray-300 shadow-sm text-sm">
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    La descarga se ejecutará automáticamente a la hora especificada.
+                                </p>
+                            </div>
+                            
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <p class="text-xs text-blue-700">
+                                    <i class="fas fa-lightbulb mr-1"></i>
+                                    <strong>Tip:</strong> Para descargar documentos del día actual a medianoche, programe para las 23:59.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex gap-3">
+                        <button type="button" onclick="descargarClick()"
+                                disabled="@Model.Ejecutando"
+                                class="flex-1 bg-indigo-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <i class="fas fa-play mr-2"></i>
+                            @(Model.Ejecutando ? "Descargando..." : "Descargar Ahora")
+                        </button>
+                        
+                        <button type="submit" asp-page-handler="Programar"
+                                class="bg-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <i class="fas fa-calendar-plus mr-2"></i>
+                            Programar
+                        </button>
+                    </div>
+
+                    <!-- Importar XML -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-3 -mx-4 -mt-4 mb-4 rounded-t-xl">
+                            <h3 class="font-semibold text-white flex items-center">
+                                <i class="fas fa-file-import mr-2"></i>Importar XML
+                            </h3>
+                            <p class="text-xs text-indigo-200">Importe archivos XML del SRI a la base de datos</p>
+                        </div>
+
+                        <!-- Empresa Info -->
+                        @{
+                            var rucActual = HttpContext.Session.GetString("EmpresaSeleccionada") ?? "";
+                            var empresas = Model.EmpresasSRI;
+                            var empActual = empresas.FirstOrDefault(e => e.ruc == rucActual);
+                        }
+                        @if (empActual != null)
+                        {
+                            <div class="mb-4 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="bg-indigo-100 p-1.5 rounded">
+                                        <i class="fas fa-building text-indigo-600 text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs text-indigo-600 font-medium uppercase">Empresa destino</span>
+                                        <p class="text-sm font-bold text-gray-800">@empActual.empresa (@empActual.ruc)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="space-y-3">
+                            <!-- Tipo de Documentos -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documentos</label>
+                                <select name="ContextoCarga" class="w-full rounded-lg border-gray-300 shadow-sm text-sm">
+                                    <option value="EMITIDOS">Emitidos (Ventas)</option>
+                                    <option value="RECIBIDOS">Recibidos (Compras)</option>
+                                </select>
+                            </div>
+
+                            <!-- Selector de carpeta -->
+                            <div class="border-2 border-dashed border-indigo-300 rounded-xl bg-indigo-50/50 hover:bg-indigo-50 transition-colors p-6 text-center">
+                                <input type="file" name="XmlFiles" multiple webkitdirectory directory accept=".xml" 
+                                       class="hidden" id="xmlInputImport" onchange="updateImportFileCount()">
+                                <label for="xmlInputImport" class="cursor-pointer">
+                                    <i class="fas fa-folder-open text-4xl text-indigo-400 mb-2"></i>
+                                    <p class="text-indigo-700 font-medium mb-1">Haga clic o arrastre la carpeta aquí</p>
+                                    <p class="text-xs text-gray-500">Se procesarán todos los archivos .xml</p>
+                                </label>
+                                <p id="importFileCount" class="mt-3 text-sm text-indigo-600 font-medium hidden">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    <span id="importFileCountNum">0</span> archivos seleccionados
+                                </p>
+                            </div>
+
+                            <!-- Botón Importar -->
+                            <button type="submit" asp-page-handler="ImportarDesdeCarpeta"
+                                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-bold shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-upload"></i>
+                                Importar Documentos
+                            </button>
+
+                            <!-- Importar del período -->
+                            <div class="text-center">
+                                <span class="text-gray-400 text-xs">o</span>
+                            </div>
+                            <button type="submit" asp-page-handler="ImportarManual"
+                                    class="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-semibold hover:bg-gray-200 transition-colors border border-gray-300">
+                                <i class="fas fa-folder-open mr-2"></i>
+                                Importar del Período Actual
+                            </button>
+
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                                    <i class="fas fa-broom mr-2 text-red-500"></i>Limpiar y Reimportar
+                                </h4>
+                                <p class="text-xs text-gray-500 mb-3">Seleccione el período a limpiar y reimportar desde los XMLs existentes</p>
+                                <div class="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Año</label>
+                                        <select asp-for="Anio" class="limpiar-anio w-full rounded-lg border-gray-300 shadow-sm text-sm">
+                                            @{
+                                                var yr = DateTime.Now.Year;
+                                                for (int i = yr; i >= yr - 3; i--)
+                                                {
+                                                    <option value="@i">@i</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Mes</label>
+                                        <select asp-for="Mes" class="limpiar-mes w-full rounded-lg border-gray-300 shadow-sm text-sm">
+                                            @for (int i = 1; i <= 12; i++)
+                                            {
+                                                <option value="@i">@i - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" asp-page-handler="LimpiarYReimportar"
+                                        class="w-full bg-red-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-red-700 transition-all flex items-center justify-center gap-2"
+                                        onclick="return confirm('¿Estás seguro? Esto borrará TODOS los registros de Ventas, Compras, NC Compras y Retenciones del período '+document.querySelector('.limpiar-anio').value+'-'+String(document.querySelector('.limpiar-mes').value).padStart(2,'0')+' y los reimportará desde los XMLs.')">
+                                    <i class="fas fa-broom"></i>
+                                    Limpiar y Reimportar Período
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- Progreso o Resultado -->
+        <div class="border-t px-6 py-4 @(Model.Ejecutando ? "bg-blue-50" : (Model.Resultado.Any() ? "bg-green-50" : "bg-gray-50"))">
+            <div class="flex items-center mb-2">
+                @if (Model.Ejecutando)
+                {
+                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                    <span class="font-medium text-blue-800">Descargando documentos...</span>
+                }
+                else if (Model.Resultado.Any())
+                {
+                    <i class="fas fa-check-circle text-green-600 mr-3 text-xl"></i>
+                    <span class="font-medium text-green-800">Resultado</span>
+                }
+                else
+                {
+                    <i class="fas fa-terminal text-gray-500 mr-3 text-xl"></i>
+                    <span class="font-medium text-gray-600">Consola de Logs</span>
                 }
             </div>
-        </div>
-
-        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-300">
-            <h3 class="text-sm font-semibold text-yellow-800 mb-2">Información</h3>
-            <ul class="text-xs text-yellow-700 space-y-1">
-                <li>• Esta función ejecuta el programa Python de descarga del SRI</li>
-                <li>• Requiere que Chrome esté instalado</li>
-                <li>• Los documentos se descargarán en la carpeta configurada del programa</li>
-                <li>• El proceso puede tomar varios minutos dependiendo de la cantidad de documentos</li>
-            </ul>
-        </div>
-
-        <div class="flex justify-between">
-            <a asp-page="/Index" class="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Cancelar</a>
-            <button type="submit" asp-page-handler="Descargar" 
-                    disabled="@Model.Ejecutando"
-                    class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                @(Model.Ejecutando ? "Descargando..." : "Iniciar Descarga")
-            </button>
-        </div>
-    </form>
-
-    @if (Model.Resultado.Any())
-    {
-        <div class="mt-6">
-            <h3 class="text-lg font-semibold mb-2">Resultado:</h3>
-            <div class="bg-gray-100 p-4 rounded-lg max-h-64 overflow-y-auto text-sm font-mono">
+            <div class="text-sm @(Model.Ejecutando ? "text-blue-600 bg-blue-100" : (Model.Resultado.Any() ? "text-green-700 bg-green-100" : "text-gray-600 bg-gray-100")) max-h-64 overflow-y-auto font-mono rounded p-3 border @(Model.Resultado.Any() || Model.Ejecutando ? "" : "border-dashed border-gray-400")" style="min-height: 150px;">
+                @if (Model.Ejecutando)
+                {
+                    <div class="text-xs text-blue-500">Procesando...</div>
+                }
+                @if (!Model.Resultado.Any() && !Model.Ejecutando)
+                {
+                    <div class="text-xs text-gray-400">Ejecute una descarga para ver los logs aquí</div>
+                }
                 @foreach (var linea in Model.Resultado)
                 {
-                    <div class="whitespace-pre-wrap">@linea</div>
+                    <div>@linea</div>
                 }
             </div>
         </div>
-    }
+
+        <!-- Historial Reciente -->
+        <div class="border-t px-6 py-4">
+            <h3 class="font-semibold text-gray-800 mb-3">
+                <i class="fas fa-history mr-2"></i>Descargas Programadas
+            </h3>
+            @if (Model.DescargasProgramadas.Any())
+            {
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-2 py-1 text-left">Empresa</th>
+                            <th class="px-2 py-1 text-left">Programado</th>
+                            <th class="px-2 py-1 text-left">Estado</th>
+                            <th class="px-2 py-1 text-left">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach (var dl in Model.DescargasProgramadas)
+                        {
+                            <tr>
+                                <td class="px-2 py-1">@dl.Empresa</td>
+                                <td class="px-2 py-1">@dl.FechaProgramada.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="px-2 py-1">
+                                    <span class="px-2 py-0.5 rounded text-xs @(dl.Estado == "Pendiente" ? "bg-yellow-100 text-yellow-800" : dl.Estado == "Completado" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800")">
+                                        @dl.Estado
+                                    </span>
+                                </td>
+                                <td class="px-2 py-1">
+                                    <form method="post" asp-page-handler="Cancelar" style="display:inline;">
+                                        <input type="hidden" name="id" value="@dl.Id" />
+                                        <button type="submit" class="text-red-600 hover:text-red-800 text-xs">
+                                            <i class="fas fa-times mr-1"></i>Cancelar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p class="text-gray-500 text-sm">No hay descargas programadas.</p>
+            }
+        </div>
+    </div>
 </div>
+
+<script>
+    @if (!string.IsNullOrEmpty(Model.Mensaje) && Model.Mensaje.Contains("completada"))
+    {
+        <text>
+        window.onload = function() {
+            alert('Descarga completada exitosamente del SRI!');
+        };
+        </text>
+    }
+    
+    function descargarClick() {
+        document.querySelector('form').submit();
+    }
+    
+    function toggleRangoFechas() {
+        var chk = document.getElementById('chkRangoFechas');
+        var div = document.getElementById('divRangoFechas');
+        div.classList.toggle('hidden', !chk.checked);
+        
+        if (chk.checked) {
+            var today = new Date();
+            var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            var lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            document.getElementById('FechaDesde').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('FechaHasta').value = lastDay.toISOString().split('T')[0];
+        }
+    }
+
+    function toggleProgramar() {
+        var chk = document.getElementById('chkProgramar');
+        var div = document.getElementById('divProgramar');
+        div.classList.toggle('hidden', !chk.checked);
+    }
+
+    function updateImportFileCount() {
+        var input = document.getElementById('xmlInputImport');
+        var countDiv = document.getElementById('importFileCount');
+        var countNum = document.getElementById('importFileCountNum');
+        
+        if (input.files.length > 0) {
+            countNum.textContent = input.files.length;
+            countDiv.classList.remove('hidden');
+        } else {
+            countDiv.classList.add('hidden');
+        }
+    }
+
+    function seleccionarTodos() {
+        document.querySelectorAll('input[name="Facturas"], input[name="NotasCredito"], input[name="NotasDebito"], input[name="Retenciones"]').forEach(cb => cb.checked = true);
+    }
+
+    function deseleccionarTodos() {
+        document.querySelectorAll('input[name="Facturas"], input[name="NotasCredito"], input[name="NotasDebito"], input[name="Retenciones"]').forEach(cb => cb.checked = false);
+    }
+
+    var rucEditando = '';
+
+    function mostrarEditarClave(ruc, empresa) {
+        rucEditando = ruc;
+        document.getElementById('empresaEditando').textContent = empresa + ' (' + ruc + ')';
+        document.getElementById('claveActual').value = '********';
+        document.getElementById('nuevaClave').value = '';
+        document.getElementById('divEditarClave').classList.remove('hidden');
+    }
+
+    function cerrarEditarClave() {
+        document.getElementById('divEditarClave').classList.add('hidden');
+        rucEditando = '';
+    }
+
+    function guardarClave() {
+        if (!rucEditando) {
+            alert('Seleccione una empresa');
+            return;
+        }
+        
+        var nuevaClave = document.getElementById('nuevaClave').value;
+        
+        if (!nuevaClave) {
+            alert('Ingrese la nueva clave');
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('ruc', rucEditando);
+        formData.append('clave', nuevaClave);
+
+        fetch('?handler=GuardarClave', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Clave guardada correctamente');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error al guardar la clave');
+        });
+    }
+</script>

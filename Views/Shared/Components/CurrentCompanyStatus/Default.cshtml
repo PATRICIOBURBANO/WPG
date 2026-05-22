@@ -1,0 +1,14 @@
+@model dynamic
+@{
+    bool has = (Model?.HasCompany ?? false);
+}
+<div class="status-bar" style="margin:8px 0; padding:6px 10px; border-radius:6px; background:#f3f4f6; color:#374151; font-size:13px; display:inline-block;">
+  @if (has)
+  {
+    <span>Empresa actual: <strong>@Model.Nombre</strong> (<strong>@Model.Ruc</strong>)</span>
+  }
+  else
+  {
+    <span>Sin empresa</span>
+  }
+</div>

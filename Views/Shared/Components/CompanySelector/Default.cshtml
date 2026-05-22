@@ -1,0 +1,17 @@
+@model AtsManager.Components.CompanySelectorViewModel
+
+@{
+    var empresas = ViewBag.OtrasEmpresas as List<AtsManager.Pages.Empresas.Models.Empresa> ?? new List<AtsManager.Pages.Empresas.Models.Empresa>();
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    if (string.IsNullOrEmpty(returnUrl) || returnUrl == "/") { returnUrl = "/Dashboard"; }
+}
+
+<div class="header-company" style="display:flex; align-items:center; gap:8px;">
+  @if (!string.IsNullOrWhiteSpace(Model.Nombre)) {
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">@Model.Nombre</span>
+    <span class="ml-2 text-xs text-gray-600">@Model.Ruc</span>
+  } else {
+    <span class="text-sm text-gray-500">Sin empresa</span>
+  }
+  <a href="/Empresas/Select?returnUrl=@Uri.EscapeDataString(returnUrl)" class="ml-2 inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 text-xs font-medium">Cambiar</a>
+</div>

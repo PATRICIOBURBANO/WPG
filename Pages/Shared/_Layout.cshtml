@@ -1,74 +1,103 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - ATS Manager</title>
-
-    <!-- Incluye Tailwind CSS (usando CDN para simplicidad) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/header.css" />
+<link rel="stylesheet" href="~/css/reports.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f4f7f9;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1f2937; font-size: 14px; }
+        header { background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 100; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 1rem; }
+        .header-inner { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+        .logo { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; color: #4f46e5; font-weight: 700; font-size: 1.125rem; }
+        .logo-icon { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .nav { display: flex; align-items: center; gap: 0.25rem; }
+        .nav-item { padding: 0.5rem 0.875rem; border-radius: 6px; color: #6b7280; text-decoration: none; font-weight: 500; transition: all 150ms; display: flex; align-items: center; gap: 0.5rem; }
+        .nav-item:hover { background: #f3f4f6; color: #1f2937; }
+        .nav-item.active { background: #eef2ff; color: #4f46e5; }
+        .nav-item.green { background: #10b981; color: white; }
+        .nav-item.green:hover { background: #059669; }
+        .dropdown { position: relative; }
+        .dropdown-content { display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); min-width: 200px; z-index: 50; margin-top: 4px; }
+        .dropdown:hover .dropdown-content { display: block; }
+        .dropdown-item { display: block; padding: 0.625rem 1rem; color: #4b5563; text-decoration: none; font-size: 0.875rem; }
+        .dropdown-item:hover { background: #f3f4f6; }
+        .dropdown-item:first-child { border-radius: 8px 8px 0 0; }
+        .dropdown-item:last-child { border-radius: 0 0 8px 8px; }
+        .dropdown-divider { border-top: 1px solid #e5e7eb; margin: 4px 0; }
+        .dropdown-label { padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #9ca3af; text-transform: uppercase; }
+        .company-badge { background: #f3f4f6; padding: 0.375rem 0.75rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500; }
+        .main { padding: 1.5rem 1rem; min-height: calc(100vh - 56px - 50px); }
+        .footer { text-align: center; padding: 1rem; color: #9ca3af; font-size: 0.75rem; border-top: 1px solid #e5e7eb; }
+        @@media (max-width: 768px) {
+            .nav { display: none; }
+            .mobile-btn { display: block !important; }
         }
-
-        .main-content {
-            /* Adaptable al 100% del espacio, centrado */
-            min-height: calc(100vh - 64px - 40px);
-            padding-top: 20px;
-            padding-bottom: 20px;
-        }
+        .mobile-btn { display: none; background: none; border: none; padding: 0.5rem; cursor: pointer; font-size: 1.25rem; color: #6b7280; }
     </style>
 </head>
 <body>
-    <!-- Barra de Navegación (Header) -->
-    <header class="bg-white shadow-md sticky top-0 z-10">
-        <nav class="w-full px-4 sm:px-6">
-            <div class="flex justify-between h-16">
-                <div class="flex">
-                    <!-- Logo / Nombre de la App -->
-                    <a asp-page="/Index" class="flex-shrink-0 flex items-center text-xl font-bold text-indigo-600">
-                        ATS Manager
-                    </a>
-                </div>
-                <div class="flex items-center space-x-2 overflow-x-auto">
-                    <!-- Menú de Navegación Principal -->
-                    <a asp-page="/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Inicio</a>
-                    <a asp-page="/Cargas/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Carga Lotes</a>
-                    <a asp-page="/Compras/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Compras</a>
-                    <a asp-page="/Ventas/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Ventas</a>
-                    <a asp-page="/RetencionesCompras/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Ret. Compras</a>
-                    <a asp-page="/Retenciones/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Ret. Ventas</a>
-                    <a asp-page="/ImportarXML/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Importar XML</a>
-                    <a asp-page="/Descargas/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Descargar SRI</a>
-                    <a asp-page="/Empresas/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Empresas</a>
-                    <a asp-page="/Reportes/Index" class="text-gray-500 hover:text-gray-900 px-2 py-2 rounded-md text-sm font-medium whitespace-nowrap">Reportes</a>
-                    <a asp-page="/Reportes/Exportar" class="text-white bg-green-500 hover:bg-green-600 px-3 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap">
-                        Exportar ATS
-                    </a>
-                </div>
+    <header>
+        <div class="container">
+            <div class="header-inner">
+                <a asp-page="/Dashboard" class="logo">
+                    <div class="logo-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <span>ATS Manager</span>
+                </a>
+                
+                <nav class="nav">
+                    <span class="company-badge">@await Component.InvokeAsync("CompanySelector")</span>
+                    
+                    <a asp-page="/ImportarXML/Index" class="nav-item"><i class="fas fa-file-import"></i> Importar</a>
+                    <a asp-page="/Cargas/Index" class="nav-item"><i class="fas fa-history"></i> Historial</a>
+                    <a asp-page="/Descargas/Index" class="nav-item"><i class="fas fa-download"></i> Descargar SRI</a>
+                    
+                    <div class="dropdown">
+                        <span class="nav-item"><i class="fas fa-edit"></i> Ventas <i class="fas fa-chevron-down" style="font-size: 10px"></i></span>
+                        <div class="dropdown-content">
+                            <a asp-page="/Ventas/Index" asp-route-tipo="01" class="dropdown-item"><i class="fas fa-file-invoice mr-2"></i>Facturas</a>
+                            <a asp-page="/Ventas/Index" asp-route-tipo="04" class="dropdown-item"><i class="fas fa-file-invoice mr-2"></i>Notas Crédito</a>
+                            <a asp-page="/Retenciones/Index" class="dropdown-item"><i class="fas fa-percent mr-2"></i>Retenciones</a>
+                            <div class="dropdown-divider"></div>
+                            <a asp-page="/Compras/Index" asp-route-tipo="01" class="dropdown-item"><i class="fas fa-shopping-cart mr-2"></i>Compras</a>
+                            <a asp-page="/NCCompras/Index" class="dropdown-item"><i class="fas fa-file-invoice mr-2"></i>NC Compras</a>
+                            <a asp-page="/RetencionesCompras/Index" class="dropdown-item"><i class="fas fa-percent mr-2"></i>Ret. Compras</a>
+                        </div>
+                    </div>
+                    
+                    <div class="dropdown">
+                        <span class="nav-item"><i class="fas fa-chart-bar"></i> Reportes <i class="fas fa-chevron-down" style="font-size: 10px"></i></span>
+                        <div class="dropdown-content">
+                            <a asp-page="/Reportes/Ventas" class="dropdown-item"><i class="fas fa-shopping-bag mr-2"></i>Ventas</a>
+                            <a asp-page="/Reportes/Compras" class="dropdown-item"><i class="fas fa-shopping-cart mr-2"></i>Compras</a>
+                            <a asp-page="/Reportes/TalonResumen" class="dropdown-item"><i class="fas fa-clipboard-list mr-2"></i>Talón Resumen</a>
+                        </div>
+                    </div>
+                    
+                    <a asp-page="/Reportes/Exportar" class="nav-item green"><i class="fas fa-file-export"></i> Exportar ATS</a>
+                </nav>
+                
+                <button class="mobile-btn"><i class="fas fa-bars"></i></button>
             </div>
-        </nav>
+        </div>
     </header>
 
-    <!-- Contenido Específico de la Página (Aquí se inyecta el Index.cshtml) -->
-    <div class="main-content w-full px-4 sm:px-6">
-        <main role="main" class="pb-3">
+    <main class="main">
+        <div class="container">
             @RenderBody()
-        </main>
-    </div>
-
-    <!-- Pie de Página (Footer) -->
-    <footer class="border-t bg-white mt-10 w-full px-4 sm:px-6">
-        <div class="py-4 text-center text-sm text-gray-500">
-            &copy; @DateTime.Now.Year - ATS Manager. Desarrollado con ASP.NET Core y Razor Pages.
         </div>
+    </main>
+    
+    <footer class="footer">
+        ATS Manager &copy; @DateTime.Now.Year - Desarrollado con ASP.NET Core
     </footer>
-
-    <!-- Sección para scripts JS específicos de cada página -->
+    
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

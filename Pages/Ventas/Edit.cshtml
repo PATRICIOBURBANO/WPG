@@ -112,6 +112,33 @@
             </div>
         </div>
 
+        @* DOCUMENTO MODIFICADO (para NC/ND) *@
+        <div class="bg-blue-50 p-4 rounded-lg">
+            <h2 class="text-base font-semibold text-blue-800 mb-3">Documento Modificado (para Notas de Crédito/Débito)</h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div>
+                    <label asp-for="Venta.TipoComprobanteModificado" class="block text-xs font-medium text-gray-700">Tipo Doc. Modificado</label>
+                    <input asp-for="Venta.TipoComprobanteModificado" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="01" />
+                </div>
+                <div>
+                    <label asp-for="Venta.EstablecimientoModificado" class="block text-xs font-medium text-gray-700">Estab. Modificado</label>
+                    <input asp-for="Venta.EstablecimientoModificado" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="001" />
+                </div>
+                <div>
+                    <label asp-for="Venta.PuntoEmisionModificado" class="block text-xs font-medium text-gray-700">PtoEmi Modificado</label>
+                    <input asp-for="Venta.PuntoEmisionModificado" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="001" />
+                </div>
+                <div>
+                    <label asp-for="Venta.SecuencialModificado" class="block text-xs font-medium text-gray-700">Secuencial Modificado</label>
+                    <input asp-for="Venta.SecuencialModificado" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="000000001" />
+                </div>
+                <div>
+                    <label asp-for="Venta.AutorizacionModificada" class="block text-xs font-medium text-gray-700">Autorización (37+ dígitos)</label>
+                    <input asp-for="Venta.AutorizacionModificada" class="w-full rounded border-gray-300 p-1 text-sm" placeholder="0010010000000010000000001..." />
+                </div>
+            </div>
+        </div>
+
         @* RETENCIONES *@
         <div class="bg-red-50 p-4 rounded-lg">
             <h2 class="text-base font-semibold text-red-800 mb-3">Retenciones</h2>

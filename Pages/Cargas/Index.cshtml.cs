@@ -1,4 +1,5 @@
 ﻿using AtsManager.Models;
+using AtsManager.Pages.Empresas.Models;
 using AtsManager.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -199,6 +200,7 @@ namespace AtsManager.Pages.Cargas
                 catch (Exception ex)
                 {
                     MensajeCarga = $"❌ Error crítico durante la importación: {ex.Message}";
+                    await OnGetAsync();
                     return Page();
                 }
 
@@ -209,6 +211,8 @@ namespace AtsManager.Pages.Cargas
                     ? "⚠️ La importación finalizó con errores."
                     : "✅ Importación XML completada correctamente.";
 
+                // Refresh the lotes list
+                await OnGetAsync();
                 return Page();
             }
 
@@ -410,6 +414,16 @@ namespace AtsManager.Pages.Cargas
             return null;
         }
 
+        private static decimal? ParseDecimal(string s, CultureInfo culture)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            var valorLimpio = s.Trim().Replace(',', '.');
+            if (decimal.TryParse(valorLimpio, NumberStyles.Any, culture, out var d)) return d;
+            if (decimal.TryParse(valorLimpio, NumberStyles.Any, CultureInfo.InvariantCulture, out d)) return d;
+            if (decimal.TryParse(valorLimpio, NumberStyles.Any, new CultureInfo("es-EC"), out d)) return d;
+            return null;
+        }
+
         private static string CodigoTipoComprobanteDesdeTexto(string tipoTexto)
         {
             var t = (tipoTexto ?? "").Trim().ToUpperInvariant();
@@ -568,25 +582,38 @@ namespace AtsManager.Pages.Cargas
             var fechaEmi = ParseDate(Get(headers, row, "FECHA_EMISION", "FECHA_RETENCION"), _loadCulture) ?? DateTime.Now;
 
             var razon = Get(headers, row, "RAZON_SOCIAL_EMISOR", "NOMBRE_EMISOR");
+            var idCliente = Get(headers, row, "RUC_EMISOR", "IDENTIFICACION_EMISOR", "ID_CLIENTE");
             var docAfectado = Get(headers, row, "DOCUMENTO_AFECTADO", "FACTURA_AFECTADA", "CLAVE_ACCESO_SUSTENTO", "CLAVE_SUSTENTO");
             var fechaDocAfectado = ParseDate(Get(headers, row, "FECHA_DOCUMENTO_AFECTADO", "FECHA_FACTURA"), _loadCulture);
+
+            var baseImpGrav = ParseDecimal(Get(headers, row, "BASE_IMPONIBLE_GRAVADA", "BASE_GRAVADA", "BASE_IVA", "MONTO_BASE_IVA"), _loadCulture);
+            var montoIva = ParseDecimal(Get(headers, row, "MONTO_IVA", "IVA", "IMPUESTO_IVA"), _loadCulture);
+            var baseImpAir = ParseDecimal(Get(headers, row, "BASE_IMPONIBLE_RENTA", "BASE_RENTA", "BASE_AIR", "MONTO_BASE_AIR"), _loadCulture);
+            var valRetIva = ParseDecimal(Get(headers, row, "VALOR_RETENCION_IVA", "RETENCION_IVA", "VALOR_IVA"), _loadCulture);
+            var valRetRenta = ParseDecimal(Get(headers, row, "VALOR_RETENCION_RENTA", "RETENCION_RENTA", "VALOR_RENTA", "RETENCION"), _loadCulture);
+            var porcentajeAir = ParseDecimal(Get(headers, row, "PORCENTAJE_AIR", "Pct_AIR", "PORCENTAJE"), _loadCulture);
+            var codRetAir = Get(headers, row, "CODIGO_RETENCION", "COD_RETENCION", "COD_AIR", "COD_RET_AIR") ?? "332";
 
             var ret = new RetencionCliente
             {
                 CargaLoteId = cargaLoteId,
                 RucEmpresa = rucEmpresa,
-                RazonSocialCliente = razon,
-                DocAfectado = docAfectado,
+                IdCliente = idCliente ?? "",
+                RazonSocialCliente = razon ?? "",
+                DocAfectado = docAfectado ?? "",
                 FechaDocAfectado = fechaDocAfectado,
-                NumRetencionCompleto = numRet,
+                NumRetencionCompleto = numRet ?? "",
                 NumRetencion = (numRet ?? "").Replace("-", ""),
-                AutorizacionRetencion = clave,
+                AutorizacionRetencion = clave ?? "",
                 FechaRetencion = fechaEmi,
-                BaseImpGrav = 0,
-                MontoIva = 0,
-                BaseImpAir = 0,
-                ValRetIva = 0,
-                ValRetRenta = 0,
+                BaseImpGrav = baseImpGrav,
+                MontoIva = montoIva,
+                BaseImpAir = baseImpAir,
+                ValRetIva = valRetIva,
+                ValRetRenta = valRetRenta,
+                PorcentajeAir = porcentajeAir,
+                CodRetAir = codRetAir,
+                TotalRetencion = (valRetIva ?? 0) + (valRetRenta ?? 0),
                 Anio = (short)anio,
                 Mes = (short)mes,
                 UsuarioCreacion = User?.Identity?.Name ?? "SYSTEM",

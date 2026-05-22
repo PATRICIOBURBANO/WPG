@@ -3,26 +3,33 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using AtsManager.Models;
 using System;
 using System.Threading.Tasks;
+using AtsManager.Pages.Empresas.Models;
 
 namespace AtsManager.Pages.NCCompras
 {
-    public class CreateModel : PageModel
+    public class CreateModel : AtsManager.Pages.ReportBasePageModel
     {
         private readonly AtsDbContext _db;
 
         [BindProperty]
         public NCCompra Registro { get; set; } = new NCCompra();
 
-        public CreateModel(AtsDbContext context)
+        public CreateModel(AtsDbContext context, AtsManager.Services.ICurrentCompanyService currentCompany) : base(currentCompany)
         {
             _db = context;
         }
 
-        public void OnGet()
+        public async Task OnGetAsync()
         {
+            await LoadCurrentCompanyAsync();
             Registro.FechaEmision = DateTime.Now.Date;
             Registro.Anio = DateTime.Now.Year;
             Registro.Mes = DateTime.Now.Month;
+            // Pre-fill RUC con la empresa activa si no estÃ¡ definido
+            if (string.IsNullOrWhiteSpace(Registro.RucEmisor))
+            {
+                Registro.RucEmisor = CurrentRuc;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -37,7 +44,7 @@ namespace AtsManager.Pages.NCCompras
             _db.NCCompras.Add(Registro);
             await _db.SaveChangesAsync();
 
-            TempData["MensajeExito"] = "Nota de crédito guardada correctamente.";
+            TempData["MensajeExito"] = "Nota de crï¿½dito guardada correctamente.";
             return RedirectToPage("./Index");
         }
     }

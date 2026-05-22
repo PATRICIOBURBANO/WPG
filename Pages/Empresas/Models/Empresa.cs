@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace AtsManager.Models
+namespace AtsManager.Pages.Empresas.Models
 {
     public class Empresa
     {
@@ -21,5 +21,8 @@ namespace AtsManager.Models
         public string? Direccion { get; set; }
 
         public bool Activa { get; set; } = true;
+
+        [MaxLength(100)]
+        public string? ClaveSRI { get; set; }
     }
 }

@@ -2,7 +2,6 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using AtsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -13,21 +12,16 @@ using System.Linq;
 
 // 🚨 CORRECCIÓN 1: Añadir directiva para las anotaciones de datos (StringLength, RegularExpression)
 using System.ComponentModel.DataAnnotations;
+using AtsManager.Pages.Empresas.Models;
 
 namespace AtsManager.Pages.Compras
 {
-    public class CreateCompraModel : PageModel
+    public class CreateCompraModel : AtsManager.Pages.ReportBasePageModel
     {
         private readonly AtsDbContext _db;
 
         [BindProperty]
         public Compra RegistroCompra { get; set; } = new Compra();
-
-        [BindProperty]
-        [Required(ErrorMessage = "Seleccione una empresa.")]
-        public int EmpresaId { get; set; }
-
-        public List<Empresa> Empresas { get; set; } = new List<Empresa>();
 
         [BindProperty]
         // Las validaciones de StringLength y RegularExpression ahora funcionan gracias al using anterior.
@@ -38,14 +32,14 @@ namespace AtsManager.Pages.Compras
         public List<string> TiposId { get; set; } = new List<string> { "01", "02", "03", "07", "08" };
         public List<string> TiposComprobante { get; set; } = new List<string> { "01", "04", "05", "41" };
 
-        public CreateCompraModel(AtsDbContext context)
+        public CreateCompraModel(AtsDbContext context, AtsManager.Services.ICurrentCompanyService currentCompany) : base(currentCompany)
         {
             _db = context;
         }
 
         public async Task<IActionResult> OnGetAsync()
         {
-            Empresas = await _db.Empresas.Where(e => e.Activa).OrderBy(e => e.RazonSocial).ToListAsync();
+            await LoadCurrentCompanyAsync();
             
             if (RegistroCompra.Id == 0)
             {
@@ -98,8 +92,8 @@ namespace AtsManager.Pages.Compras
             try
             {
                 // Lógica de precarga
-                string fechaString = clave.Substring(0, 6);
-                DateTime fechaEmision = DateTime.ParseExact(fechaString, "ddMMyy", CultureInfo.InvariantCulture);
+                string fechaString = clave.Substring(0, 8);
+                DateTime fechaEmision = DateTime.ParseExact(fechaString, "ddMMyyyy", CultureInfo.InvariantCulture);
                 string tipoComprobante = clave.Substring(8, 2);
                 string rucProveedor = clave.Substring(10, 13);
                 string serieCompleta = clave.Substring(23, 6);
@@ -115,7 +109,11 @@ namespace AtsManager.Pages.Compras
                 RegistroCompra.TipoComprobante = tipoComprobante;
                 RegistroCompra.NumComprobante = numComprobante;
                 RegistroCompra.Autorizacion = clave;
-                RegistroCompra.RazonSocialProveedor = "";
+                var proveedorExistente = _db.Compras
+                    .Where(c => c.IdProveedor == rucProveedor && !string.IsNullOrEmpty(c.RazonSocialProveedor))
+                    .OrderByDescending(c => c.FechaEmision)
+                    .FirstOrDefault();
+                RegistroCompra.RazonSocialProveedor = proveedorExistente?.RazonSocialProveedor ?? "";
 
                 ModelState.AddModelError(string.Empty, "Datos de comprobante precargados con éxito.");
             }
@@ -131,18 +129,10 @@ namespace AtsManager.Pages.Compras
 
         public async Task<IActionResult> OnPostAsync()
         {
-            Empresas = await _db.Empresas.Where(e => e.Activa).OrderBy(e => e.RazonSocial).ToListAsync();
-
-            if (EmpresaId <= 0)
+            await LoadCurrentCompanyAsync();
+            if (string.IsNullOrEmpty(CurrentRuc))
             {
-                ModelState.AddModelError("EmpresaId", "Seleccione una empresa.");
-                return RetornarConErroresDeDiagnostico();
-            }
-
-            var empresa = await _db.Empresas.FindAsync(EmpresaId);
-            if (empresa == null)
-            {
-                ModelState.AddModelError("EmpresaId", "La empresa seleccionada no existe.");
+                ModelState.AddModelError("", "No hay una empresa global seleccionada.");
                 return RetornarConErroresDeDiagnostico();
             }
 
@@ -239,7 +229,7 @@ namespace AtsManager.Pages.Compras
             RegistroCompra.UsuarioCreacion = User.Identity?.Name ?? "IngresoManual";
             RegistroCompra.FechaCreacion = DateTime.Now;
             RegistroCompra.CargaLoteId = null;
-            RegistroCompra.RucEmpresa = empresa.Ruc;
+            RegistroCompra.RucEmpresa = CurrentRuc;
 
             // ====================================================================
             // PASO 4: GUARDADO

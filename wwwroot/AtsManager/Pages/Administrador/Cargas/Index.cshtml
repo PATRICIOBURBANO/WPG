@@ -1,0 +1,43 @@
+@page
+@model AtsManager.Pages.Administrador.Cargas.IndexModel
+@{ ViewData["Title"] = "Cargas"; }
+
+<h1>Administrador - Cargas</h1>
+
+<section>
+  <h2>Cargar Lote</h2>
+  <form method="post" enctype="multipart/form-data" asp-page-handler="UploadLote">
+    <div>
+      <label>Archivo</label>
+      <input type="file" name="archivo" />
+    </div>
+    <div>
+      <button type="submit">Cargar</button>
+    </div>
+  </form>
+</section>
+
+<section>
+  <h2>Lotes existentes</h2>
+  <table>
+    <thead><tr><th>Id</th><th>Archivo</th><th>Año</th><th>Mes</th><th>Total</th><th>Acciones</th></tr></thead>
+    <tbody>
+      @foreach (var lote in Model.Cargas)
+      {
+        <tr>
+          <td>@lote.Id</td>
+          <td>@lote.NombreArchivo</td>
+          <td>@lote.Anio</td>
+          <td>@lote.Mes</td>
+          <td>@lote.TotalRegistros</td>
+          <td>
+            <form method="post" asp-page-handler="DeleteLote" onsubmit="return confirm('Eliminar lote?');" style="display:inline-block;">
+              <input type="hidden" name="id" value="@lote.Id" />
+              <button type="submit">Eliminar</button>
+            </form>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>

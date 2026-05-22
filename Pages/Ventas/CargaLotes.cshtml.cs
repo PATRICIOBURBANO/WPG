@@ -1,4 +1,4 @@
-﻿using AtsManager.Models;
+﻿using AtsManager.Pages.Empresas.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;

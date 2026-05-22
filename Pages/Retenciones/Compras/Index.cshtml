@@ -1,0 +1,36 @@
+@page
+@model AtsManager.Pages.Retenciones.Compras.IndexModel
+@if (Model.HasCompanyPublic) {
+  <div class="p-2 mb-3 bg-gray-100 rounded text-sm text-gray-700" title="Empresa actual">
+    Empresa actual: <strong>@Model.CurrentNombrePublic</strong> (<strong>@Model.CurrentRucPublic</strong>)
+  </div>
+}
+
+<h1>Retenciones de Compras</h1>
+<table class="report-table min-w-full">
+  <thead class="bg-gray-50">
+    <tr>
+      <th class="px-2 py-2 text-left text-xs font-medium text-gray-500">Fecha</th>
+      <th class="px-2 py-2 text-left text-xs font-medium text-gray-500">No. Retención</th>
+      <th class="px-2 py-2 text-left text-xs font-medium text-gray-500">RUC</th>
+      <th class="px-2 py-2 text-left text-xs font-medium text-gray-500">Nombre</th>
+      <th class="px-2 py-2 text-right text-xs font-medium text-gray-500">Base IVA</th>
+      <th class="px-2 py-2 text-right text-xs font-medium text-gray-500">Ret IVA</th>
+      <th class="px-2 py-2 text-right text-xs font-medium text-gray-500">Total</th>
+    </tr>
+  </thead>
+  <tbody class="bg-white divide-y divide-gray-200">
+  @foreach (var r in Model.Retenciones)
+  {
+    <tr>
+      <td class="px-2 py-2 text-xs text-gray-900">@r.FechaRetencion?.ToString("dd/MM/yyyy") ?? "-"</td>
+      <td class="px-2 py-2 text-xs text-gray-900">@r.NumRetencionCompleto</td>
+      <td class="px-2 py-2 text-xs text-gray-900">@r.RucEmpresa</td>
+      <td class="px-2 py-2 text-xs text-gray-900">@r.RazonSocialCliente</td>
+      <td class="px-2 py-2 text-xs text-right">@((r.BaseImpGrav ?? 0).ToString("N2"))</td>
+      <td class="px-2 py-2 text-xs text-right text-red-600">@((r.ValRetIva ?? 0).ToString("N2"))</td>
+      <td class="px-2 py-2 text-xs text-right">@((r.BaseImpGrav ?? 0 + r.ValRetIva ?? 0).ToString("N2"))</td>
+    </tr>
+  }
+  </tbody>
+</table>

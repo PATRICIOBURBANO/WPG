@@ -1,158 +1,142 @@
-﻿@page
+@page
 @model AtsManager.Pages.ImportarXML.IndexModel
 @using System.Globalization
 
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<style>
-    .message-box {
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-        font-weight: 600;
-    }
-
-    .success {
-        background-color: #d1fae5;
-        color: #065f46;
-        border-left: 5px solid #10b981;
-    }
-
-    .warning {
-        background-color: #fffbeb;
-        color: #92400e;
-        border-left: 5px solid #f59e0b;
-    }
-
-    .error {
-        background-color: #fee2e2;
-        color: #991b1b;
-        border-left: 5px solid #ef4444;
-    }
-</style>
-<div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-    <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
-        Carga de Documentos Electrónicos XML
-    </h1>
-
-    <!-- ================= FORM ================= -->
-    <form method="post" enctype="multipart/form-data" class="space-y-6">
-
-        <!-- Año / Mes / Tipo -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-                <label asp-for="Anio" class="block text-sm font-medium text-gray-700">Año Fiscal</label>
-                <select asp-for="Anio" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    @{
-                        var currentYear = DateTime.Now.Year;
-                        for (int i = currentYear - 5; i <= currentYear + 1; i++)
-                        {
-                            <option value="@i">@i</option>
-                        }
-                    }
-                </select>
-            </div>
-
-            <div>
-                <label asp-for="Mes" class="block text-sm font-medium text-gray-700">Mes Fiscal</label>
-                <select asp-for="Mes" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    @for (int i = 1; i <= 12; i++)
-                    {
-                        <option value="@i">
-                            @i.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)
-                        </option>
-                    }
-                </select>
-            </div>
-
-            <div>
-                <label asp-for="TipoArchivo" class="block text-sm font-medium text-gray-700">Tipo de Anexo</label>
-                <select asp-for="TipoArchivo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    <option value="XML">XML Electrónicos</option>
-                </select>
-            </div>
+<div class="min-h-screen p-4 sm:p-8">
+    <div class="max-w-4xl mx-auto">
         
-            <div>
-                <label asp-for="ContextoCarga" class="block text-sm font-medium text-gray-700">Origen de la carpeta</label>
-                <select asp-for="ContextoCarga" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    <option value="RECIBIDOS">Recibidos</option>
-                    <option value="EMITIDOS">Emitidos</option>
-                </select>
-                <p class="text-xs text-gray-500 mt-1">Recibidos: compras excepto retenciones. Emitidos: ventas excepto retenciones.</p>
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-xl text-white shadow-lg">
+                    <i class="fas fa-file-import"></i>
+                </div>
+                Carga de Documentos XML
+            </h1>
+            <p class="text-gray-500 mt-2 ml-1">Importe archivos XML del SRI para填充ar la base de datos</p>
+        </div>
+
+        @* Mensaje *@
+        @if (!string.IsNullOrWhiteSpace(Model.MensajeCarga))
+        {
+            <div class="mb-6 p-4 rounded-lg border-l-4 bg-blue-50 text-blue-800 border-blue-500">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="font-semibold">@Model.MensajeCarga</span>
+                </div>
             </div>
-</div>
+        }
 
-        <!-- ================= SELECTOR DE CARPETA ================= -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                Seleccionar carpeta con XML
-            </label>
-
-            <div class="flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-indigo-300 rounded-md bg-indigo-50">
-                <div class="text-center space-y-2">
-                    <div class="text-sm text-indigo-700 font-medium">
-                        Seleccione una carpeta que contenga archivos XML
+        <!-- Form -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <form method="post" enctype="multipart/form-data">
+                
+                <!-- Empresa Info -->
+                <div class="mb-6 bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-indigo-100 p-2 rounded-lg">
+                            <i class="fas fa-building text-indigo-600"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-indigo-600 font-medium uppercase">Empresa destino</span>
+                            <p class="text-sm font-bold text-gray-800">@Model.EmpresaNombre (@Model.EmpresaRuc)</p>
+                        </div>
                     </div>
+                </div>
 
-                    <!-- IMPORTANTE: NO asp-for -->
-                    <input type="file"
-                           name="XmlFiles"
-                           id="XmlFiles"
-                           multiple
-                           webkitdirectory
-                           directory
-                           accept=".xml"
-                           class="block mx-auto text-sm text-gray-600" />
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label asp-for="ContextoCarga" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documentos</label>
+                        <select asp-for="ContextoCarga" class="w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="EMITIDOS">Emitidos (Ventas)</option>
+                            <option value="RECIBIDOS">Recibidos (Compras)</option>
+                        </select>
+                    </div>
+                </div>
 
-                    <p class="text-xs text-gray-500">
-                        Se procesarán todos los archivos <strong>.xml</strong> de la carpeta seleccionada
-                    </p>
+                <!-- Selector de carpeta -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Carpeta con archivos XML</label>
+                    <div class="border-2 border-dashed border-indigo-300 rounded-xl bg-indigo-50/50 hover:bg-indigo-50 transition-colors p-8 text-center">
+                        <input type="file" name="XmlFiles" multiple webkitdirectory directory accept=".xml" class="hidden" id="xmlInput" onchange="updateFileCount()">
+                        <label for="xmlInput" class="cursor-pointer">
+                            <i class="fas fa-folder-open text-4xl text-indigo-400 mb-3"></i>
+                            <p class="text-indigo-700 font-medium mb-1">Haga clic o arrastre la carpeta aquí</p>
+                            <p class="text-xs text-gray-500">Se procesarán todos los archivos .xml</p>
+                        </label>
+                        <p id="fileCount" class="mt-3 text-sm text-indigo-600 font-medium hidden">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            <span id="fileCountNum">0</span> archivos seleccionados
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Botón -->
+                <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center justify-center gap-3">
+                    <i class="fas fa-upload"></i>
+                    Importar Documentos
+                </button>
+            </form>
+        </div>
+
+        <!-- Resultados -->
+        @if (Model.ResultadosImportacion.Any())
+        {
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-list-check text-green-500"></i>
+                    Resultado de la Importación
+                </h3>
+                <div class="space-y-2 max-h-96 overflow-y-auto">
+                    @foreach (var mensaje in Model.ResultadosImportacion)
+                    {
+                        var clase = "bg-green-50 border-green-200 text-green-800";
+                        var icono = "fa-check-circle text-green-500";
+                        
+                        if (mensaje.StartsWith("❌"))
+                        {
+                            clase = "bg-red-50 border-red-200 text-red-800";
+                            icono = "fa-times-circle text-red-500";
+                        }
+                        else if (mensaje.StartsWith("ADVERTENCIA"))
+                        {
+                            clase = "bg-yellow-50 border-yellow-200 text-yellow-800";
+                            icono = "fa-exclamation-triangle text-yellow-500";
+                        }
+                        else if (mensaje.StartsWith("✅"))
+                        {
+                            clase = "bg-green-50 border-green-200 text-green-800";
+                            icono = "fa-check-circle text-green-500";
+                        }
+
+                        <div class="flex items-start gap-3 p-3 rounded-lg border @clase">
+                            <i class="fas @icono mt-0.5"></i>
+                            <span class="text-sm">@mensaje</span>
+                        </div>
+                    }
                 </div>
             </div>
-        </div>
+        }
 
-        <!-- ================= BOTÓN ================= -->
-        <div>
-            <button type="submit"
-                    class="w-full py-3 px-4 rounded-md text-white font-semibold bg-indigo-600 hover:bg-indigo-700 transition">
-                Procesar e Importar XML
-            </button>
-        </div>
-    </form>
-
-    <!-- ================= MENSAJE GENERAL ================= -->
-    @if (!string.IsNullOrWhiteSpace(Model.MensajeCarga))
-    {
-        <div class="message-box mt-6 @(Model.MensajeCarga.StartsWith("❌") ? "error" : "success")">
-            @Model.MensajeCarga
-        </div>
-    }
-
-    <!-- ================= RESULTADOS ================= -->
-    @if (Model.ResultadosImportacion.Any())
-    {
-        <h2 class="text-xl font-bold text-gray-800 mt-8 mb-4">
-            Resultado del Procesamiento
-        </h2>
-
-        <div class="space-y-3">
-            @foreach (var mensaje in Model.ResultadosImportacion)
-            {
-                var clase = "success";
-
-                if (mensaje.StartsWith("❌"))
-                {
-                    clase = "error";
-                }
-                else if (mensaje.StartsWith("ADVERTENCIA") || mensaje.StartsWith("Archivos XML"))
-                {
-                    clase = "warning";
-                }
-
-                <div class="message-box @clase">
-                    @mensaje
-                </div>
-            }
-        </div>
-    }
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        function updateFileCount() {
+            var input = document.getElementById('xmlInput');
+            var countDiv = document.getElementById('fileCount');
+            var countNum = document.getElementById('fileCountNum');
+            
+            if (input.files.length > 0) {
+                countNum.textContent = input.files.length;
+                countDiv.classList.remove('hidden');
+            } else {
+                countDiv.classList.add('hidden');
+            }
+        }
+    </script>
+}

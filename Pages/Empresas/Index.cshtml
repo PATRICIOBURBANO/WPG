@@ -4,8 +4,17 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <div class="w-full px-2 py-4">
-    <h1 class="text-2xl font-extrabold text-gray-900 mb-4">Administracion de Empresas</h1>
-    <p class="text-gray-500 mb-4">Gestion las empresas/empresas emisoras para el ATS.</p>
+    <div class="flex justify-between items-center mb-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-gray-900">Administración de Empresas</h1>
+            <p class="text-gray-500 text-sm">Gestione las empresas emisoras para el ATS.</p>
+        </div>
+        <form method="post" asp-page-handler="ImportarFromPython">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-medium shadow flex items-center gap-2">
+                <i class="fas fa-file-import"></i> Importar de Python (config.yaml)
+            </button>
+        </form>
+    </div>
 
     @if (!string.IsNullOrEmpty(Model.Mensaje))
     {
@@ -15,7 +24,7 @@
     }
 
     <form method="post" class="mb-6 bg-white p-4 rounded-lg shadow">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
                 <label class="block text-xs font-medium text-gray-700">RUC</label>
                 <input asp-for="NuevaEmpresa.Ruc" class="w-full rounded border-gray-300 text-sm" placeholder="1792468264001" />
@@ -31,6 +40,10 @@
             <div>
                 <label class="block text-xs font-medium text-gray-700">Direccion</label>
                 <input asp-for="NuevaEmpresa.Direccion" class="w-full rounded border-gray-300 text-sm" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Clave SRI</label>
+                <input asp-for="NuevaEmpresa.ClaveSRI" type="password" class="w-full rounded border-gray-300 text-sm" placeholder="Clave SRI" autocomplete="new-password" />
             </div>
             <div class="flex items-end">
                 <div class="flex items-center mb-2">
@@ -49,6 +62,7 @@
                     <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">RUC</th>
                     <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Razon Social</th>
                     <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estab</th>
+                    <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Clave SRI</th>
                     <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                     <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
@@ -60,13 +74,24 @@
                         <td class="px-2 py-2 text-xs">@empresa.Ruc</td>
                         <td class="px-2 py-2 text-xs">@empresa.RazonSocial</td>
                         <td class="px-2 py-2 text-xs">@empresa.CodEstablecimiento</td>
+                        <td class="px-2 py-2 text-xs">
+                            @if (!string.IsNullOrEmpty(empresa.ClaveSRI)) {
+                                <span class="inline-flex items-center gap-1">
+                                    <span id="clave-ver-@empresa.Id" class="hidden">@empresa.ClaveSRI</span>
+                                    <span id="clave-mask-@empresa.Id">••••••••</span>
+                                    <button type="button" onclick="toggleVerClave(@empresa.Id)" class="text-indigo-600 hover:text-indigo-900 text-xs">👁</button>
+                                </span>
+                            } else {
+                                <span class="text-red-500 text-xs">Sin clave</span>
+                            }
+                        </td>
                         <td class="px-2 py-2">
                             <span class="px-2 py-1 text-xs font-semibold rounded-full @(empresa.Activa ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800")">
                                 @(empresa.Activa ? "Activa" : "Inactiva")
                             </span>
                         </td>
                         <td class="px-2 py-2">
-                            <button onclick="editarEmpresa('@empresa.Id', '@empresa.Ruc', '@empresa.RazonSocial', '@empresa.Direccion', '@empresa.CodEstablecimiento', '@empresa.Activa')" class="bg-indigo-500 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs mr-1">Editar</button>
+                            <button onclick="editarEmpresa('@empresa.Id', '@empresa.Ruc', '@empresa.RazonSocial', '@empresa.Direccion', '@empresa.CodEstablecimiento', '@empresa.Activa', '@empresa.ClaveSRI')" class="bg-indigo-500 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs mr-1">Editar</button>
                             <form method="post" asp-page-handler="Delete" asp-route-id="@empresa.Id" style="display:inline;" onsubmit="return confirm('Esta seguro de eliminar?');">
                                 <button type="submit" class="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded text-xs">Eliminar</button>
                             </form>
@@ -80,7 +105,7 @@
 
 <!-- Modal de Edición -->
 <div id="editModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="relative top-20 mx-auto p-5 border w-[500px] shadow-lg rounded-md bg-white">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Editar Empresa</h3>
         <form method="post" asp-page-handler="Editar">
             <input type="hidden" id="editId" name="id" />
@@ -101,6 +126,14 @@
                     <label class="block text-sm font-medium text-gray-700">Código Establecimiento</label>
                     <input id="editEstablecimiento" name="NuevaEmpresa.CodEstablecimiento" class="w-full rounded border-gray-300 text-sm" />
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Clave SRI</label>
+                    <div class="flex items-center gap-2">
+                        <input id="editClaveSRI" name="NuevaEmpresa.ClaveSRI" type="text" class="flex-1 rounded border-gray-300 text-sm" autocomplete="off" />
+                        <button type="button" onclick="toggleEditClave()" class="px-3 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300">👁</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Deje vacío para mantener la clave actual.</p>
+                </div>
                 <div class="flex items-center">
                     <input type="hidden" name="EmpresaActiva" value="false" />
                     <input id="editActiva" name="EmpresaActiva" type="checkbox" value="true" class="h-4 w-4 text-indigo-600 border-gray-300 rounded" />
@@ -116,14 +149,37 @@
 </div>
 
 <script>
-    function editarEmpresa(id, ruc, razonSocial, direccion, establecimiento, activa) {
+    function toggleVerClave(id) {
+        var ver = document.getElementById('clave-ver-' + id);
+        var mask = document.getElementById('clave-mask-' + id);
+        if (ver.classList.contains('hidden')) {
+            ver.classList.remove('hidden');
+            mask.classList.add('hidden');
+        } else {
+            ver.classList.add('hidden');
+            mask.classList.remove('hidden');
+        }
+    }
+
+    function editarEmpresa(id, ruc, razonSocial, direccion, establecimiento, activa, claveSri) {
         document.getElementById('editId').value = id;
         document.getElementById('editRuc').value = ruc;
         document.getElementById('editRazonSocial').value = razonSocial;
         document.getElementById('editDireccion').value = direccion || '';
         document.getElementById('editEstablecimiento').value = establecimiento || '';
         document.getElementById('editActiva').checked = activa === 'True';
+        document.getElementById('editClaveSRI').value = '';
+        document.getElementById('editClaveSRI').dataset.originalClave = claveSri || '';
         document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function toggleEditClave() {
+        var input = document.getElementById('editClaveSRI');
+        if (input.type === 'password') {
+            input.type = 'text';
+        } else {
+            input.type = 'password';
+        }
     }
     
     function cerrarModal() {

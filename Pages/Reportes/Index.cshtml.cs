@@ -1,22 +1,28 @@
-using AtsManager.Models;
+using AtsManager.Pages.Empresas.Models;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
+using AtsManager.Services;
 
 namespace AtsManager.Pages.Reportes
 {
     public class IndexModel : PageModel
     {
         private readonly AtsDbContext _db;
+        private readonly AtsManager.Services.ICurrentCompanyService _currentCompany;
 
-        public IndexModel(AtsDbContext db)
+        public IndexModel(AtsDbContext db, AtsManager.Services.ICurrentCompanyService currentCompany)
         {
             _db = db;
+            _currentCompany = currentCompany;
         }
 
         [BindProperty(SupportsGet = true)] public string RucEmpresa { get; set; } = string.Empty;
@@ -33,14 +39,32 @@ namespace AtsManager.Pages.Reportes
         public decimal TotalIva { get; set; }
         public decimal TotalTotal { get; set; }
         public List<Empresa> Empresas { get; set; } = new();
+        public List<CargaLote> Lotes { get; set; } = new();
 
         public async Task OnGetAsync()
         {
             Empresas = await _db.Empresas.OrderBy(e => e.RazonSocial).ToListAsync();
-            
+
+            // Cargar empresa actual desde el contexto centralizado
+            await _currentCompany.LoadAsync();
+            if (string.IsNullOrWhiteSpace(RucEmpresa))
+            {
+                RucEmpresa = _currentCompany.Ruc;
+            }
+
+            // Guardar nombre de empresa para mostrar
             if (!string.IsNullOrWhiteSpace(RucEmpresa))
             {
-                await CargarDatosAsync();
+                var empresa = Empresas.FirstOrDefault(e => e.Ruc == RucEmpresa);
+                if (empresa != null)
+                {
+                    ViewData["EmpresaNombre"] = $"{empresa.Ruc} - {empresa.RazonSocial}";
+                    Lotes = await _db.CargasLotes
+                        .Where(l => l.Anio == Anio && (Mes == 0 || l.Mes == Mes))
+                        .OrderByDescending(l => l.FechaCarga)
+                        .ToListAsync();
+                    await CargarDatosAsync();
+                }
             }
         }
 
@@ -55,7 +79,7 @@ namespace AtsManager.Pages.Reportes
 
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Reporte");
-            var headers = new[] { "Fecha", "Tipo", "Número", "RUC", "Nombre", "Base 0%", "Base Gravada", "IVA", "Total", "Retención" };
+            var headers = new[] { "Fecha", "Tipo", "Número", "Doc. Afectado", "RUC", "Nombre", "Base 0%", "Base Gravada", "IVA", "Total", "Retención" };
             for (int i = 0; i < headers.Length; i++)
             {
                 ws.Cell(1, i + 1).Value = headers[i];
@@ -69,13 +93,14 @@ namespace AtsManager.Pages.Reportes
                 ws.Cell(row, 1).Value = f.Fecha;
                 ws.Cell(row, 2).Value = f.Tipo;
                 ws.Cell(row, 3).Value = f.Numero;
-                ws.Cell(row, 4).Value = f.RucRelacionado;
-                ws.Cell(row, 5).Value = f.NombreRelacionado;
-                ws.Cell(row, 6).Value = f.Base0;
-                ws.Cell(row, 7).Value = f.BaseGravada;
-                ws.Cell(row, 8).Value = f.Iva;
-                ws.Cell(row, 9).Value = f.Total;
-                ws.Cell(row, 10).Value = f.Retencion;
+                ws.Cell(row, 4).Value = f.DocAfectado;
+                ws.Cell(row, 5).Value = f.RucRelacionado;
+                ws.Cell(row, 6).Value = f.NombreRelacionado;
+                ws.Cell(row, 7).Value = f.Base0;
+                ws.Cell(row, 8).Value = f.BaseGravada;
+                ws.Cell(row, 9).Value = f.Iva;
+                ws.Cell(row, 10).Value = f.Total;
+                ws.Cell(row, 11).Value = f.Retencion;
                 row++;
             }
 
@@ -108,43 +133,31 @@ namespace AtsManager.Pages.Reportes
 
             if (Contexto == "RECIBIDOS")
             {
-                if (TipoDocumento == "RETENCION")
+                // Recibidos: Compras (facturas, NC, ND) + Retenciones de clientes (ventas con retención)
+                if (string.IsNullOrEmpty(TipoDocumento) || TipoDocumento == "FACTURA" || TipoDocumento == "NOTA_CREDITO" || TipoDocumento == "NOTA_DEBITO")
                 {
-                    var ventas = await _db.Ventas
-                        .Include(v => v.CargaLote)
-                        .Where(v => v.RucEmpresa == RucEmpresa && v.Anio == Anio && v.Mes == Mes)
-                        .OrderBy(v => v.FechaRetencion ?? v.FechaEmision)
-                        .ToListAsync();
-
-                    Filas = ventas.Select(v => new ReporteFila
-                    {
-                        Fecha = (v.FechaRetencion ?? v.FechaEmision)?.ToString("dd/MM/yyyy") ?? string.Empty,
-                        Tipo = "Retención",
-                        Numero = v.NumRetencion ?? v.NumComprobante,
-                        RucRelacionado = v.IdCliente,
-                        NombreRelacionado = v.RazonSocialCliente,
-                        Base0 = v.BaseImponible ?? 0,
-                        BaseGravada = v.BaseImpGrav ?? 0,
-                        Iva = v.MontoIva ?? 0,
-                        Total = v.MontoTotal ?? 0,
-                        Retencion = (v.valRetIVA ?? 0) + (v.valRetRenta ?? 0),
-                        LinkPdf = ConstruirLinkPdf("RETENCION", v.Estab ?? "001", v.PtoEmi ?? "001", v.NumRetencion ?? v.NumComprobante, v.IdCliente, v.FechaRetencion ?? v.FechaEmision, Contexto)
-                    }).ToList();
-                }
-                else
-                {
-                    string codigo = MapTipoDocumento(TipoDocumento);
-                    var compras = await _db.Compras
+                    // Cargar compras
+                    var queryCompras = _db.Compras
                         .Include(c => c.CargaLote)
-                        .Where(c => c.RucEmpresa == RucEmpresa && c.Anio == Anio && c.Mes == Mes && c.TipoComprobante == codigo)
-                        .OrderBy(c => c.FechaEmision)
-                        .ToListAsync();
+                        .Where(c => c.RucEmpresa == RucEmpresa && c.Anio == Anio);
 
-                    Filas = compras.Select(c => new ReporteFila
+                    if (Mes > 0)
+                        queryCompras = queryCompras.Where(c => c.Mes == Mes);
+
+                    if (!string.IsNullOrEmpty(TipoDocumento) && TipoDocumento != "FACTURA")
+                    {
+                        string codigo = MapTipoDocumento(TipoDocumento);
+                        queryCompras = queryCompras.Where(c => c.TipoComprobante == codigo);
+                    }
+
+                    var compras = await queryCompras.OrderBy(c => c.FechaEmision).ToListAsync();
+
+                    var filasCompras = compras.Select(c => new ReporteFila
                     {
                         Fecha = c.FechaEmision?.ToString("dd/MM/yyyy") ?? string.Empty,
                         Tipo = TipoDocumentoLegible(c.TipoComprobante),
                         Numero = c.NumComprobante,
+                        DocAfectado = !string.IsNullOrEmpty(c.SecuencialModificado) ? $"{c.EstablecimientoModificado}-{c.PuntoEmisionModificado}-{c.SecuencialModificado}" : "",
                         RucRelacionado = c.IdProveedor,
                         NombreRelacionado = c.RazonSocialProveedor,
                         Base0 = c.BaseNoGraIva ?? c.BaseImponible ?? 0,
@@ -154,47 +167,70 @@ namespace AtsManager.Pages.Reportes
                         Retencion = (c.ValRetAir ?? 0) + (c.ValorRetServicios ?? 0) + (c.ValRetServ100 ?? 0),
                         LinkPdf = ConstruirLinkPdf(TipoDocumentoLegible(c.TipoComprobante), c.Estab ?? "001", c.PtoEmi ?? "001", c.NumComprobante, c.IdProveedor, c.FechaEmision, Contexto)
                     }).ToList();
+
+                    Filas.AddRange(filasCompras);
                 }
+
+                if (string.IsNullOrEmpty(TipoDocumento) || TipoDocumento == "RETENCION")
+                {
+                    // Cargar retenciones recibidas (tabla RetencionesClientes)
+                    var queryRetenciones = _db.RetencionesClientes
+                        .Where(r => r.RucEmpresa == RucEmpresa && r.Anio == Anio);
+
+                    if (Mes > 0)
+                        queryRetenciones = queryRetenciones.Where(r => r.Mes == Mes);
+
+                    var retencionesRecibidas = await queryRetenciones.OrderBy(r => r.FechaRetencion).ToListAsync();
+
+                    var filasRetenciones = retencionesRecibidas.Select(r => new ReporteFila
+                    {
+                        Fecha = r.FechaRetencion?.ToString("dd/MM/yyyy") ?? string.Empty,
+                        Tipo = "Retención",
+                        Numero = r.NumRetencionCompleto,
+                        DocAfectado = string.IsNullOrWhiteSpace(r.DocAfectado) ? "0000000000" : r.DocAfectado,
+                        RucRelacionado = r.RucEmisor,
+                        NombreRelacionado = r.RazonSocialEmisor,
+                        Base0 = 0,
+                        BaseGravada = r.BaseImpGrav ?? 0,
+                        Iva = r.ValRetIva ?? 0,
+                        Total = ((r.BaseImpGrav ?? 0) + (r.BaseImpAir ?? 0)),
+                        Retencion = (r.ValRetIva ?? 0) + (r.ValRetRenta ?? 0),
+                        LinkPdf = ConstruirLinkPdf("RETENCION", r.NumRetencionCompleto?.Split('-').FirstOrDefault() ?? "001", r.NumRetencionCompleto?.Split('-').Skip(1).FirstOrDefault() ?? "001", r.NumRetencion ?? "", r.RucEmisor, r.FechaRetencion, Contexto)
+                    }).ToList();
+
+                    Filas.AddRange(filasRetenciones);
+                }
+
+                // Ordenar por fecha
+                Filas = Filas.OrderBy(f => f.Fecha).ToList();
             }
             else
             {
-                if (TipoDocumento == "RETENCION")
+                // Emitidos: Ventas (facturas, NC, ND) + Retenciones emitidas a clientes (tabla RetencionesClientes)
+                if (string.IsNullOrEmpty(TipoDocumento) || TipoDocumento == "FACTURA" || TipoDocumento == "NOTA_CREDITO" || TipoDocumento == "NOTA_DEBITO")
                 {
-                    var compras = await _db.Compras
-                        .Include(c => c.CargaLote)
-                        .Where(c => c.RucEmpresa == RucEmpresa && c.Anio == Anio && c.Mes == Mes && c.TipoComprobante == "07")
-                        .OrderBy(c => c.FechaEmision)
-                        .ToListAsync();
-
-                    Filas = compras.Select(c => new ReporteFila
-                    {
-                        Fecha = c.FechaEmision?.ToString("dd/MM/yyyy") ?? string.Empty,
-                        Tipo = "Retención",
-                        Numero = c.NumComprobante,
-                        RucRelacionado = c.IdProveedor,
-                        NombreRelacionado = c.RazonSocialProveedor,
-                        Base0 = c.BaseNoGraIva ?? c.BaseImponible ?? 0,
-                        BaseGravada = c.BaseImpGrav ?? 0,
-                        Iva = c.MontoIva ?? 0,
-                        Total = c.MontoTotal ?? 0,
-                        Retencion = (c.ValRetAir ?? 0) + (c.ValorRetServicios ?? 0) + (c.ValRetServ100 ?? 0),
-                        LinkPdf = ConstruirLinkPdf("RETENCION", c.Estab ?? "001", c.PtoEmi ?? "001", c.NumComprobante, c.IdProveedor, c.FechaEmision, Contexto)
-                    }).ToList();
-                }
-                else
-                {
-                    string codigo = MapTipoDocumento(TipoDocumento);
-                    var ventas = await _db.Ventas
+                    // Cargar ventas
+                    var queryVentas = _db.Ventas
                         .Include(v => v.CargaLote)
-                        .Where(v => v.RucEmpresa == RucEmpresa && v.Anio == Anio && v.Mes == Mes && v.TipoComprobante == codigo)
-                        .OrderBy(v => v.FechaEmision)
-                        .ToListAsync();
+                        .Where(v => v.RucEmpresa == RucEmpresa && v.Anio == Anio);
 
-                    Filas = ventas.Select(v => new ReporteFila
+                    if (Mes > 0)
+                        queryVentas = queryVentas.Where(v => v.Mes == Mes);
+
+                    if (!string.IsNullOrEmpty(TipoDocumento) && TipoDocumento != "FACTURA")
+                    {
+                        string codigo = MapTipoDocumento(TipoDocumento);
+                        queryVentas = queryVentas.Where(v => v.TipoComprobante == codigo);
+                    }
+
+                    var ventas = await queryVentas.OrderBy(v => v.FechaEmision).ToListAsync();
+
+                    var filasVentas = ventas.Select(v => new ReporteFila
                     {
                         Fecha = v.FechaEmision?.ToString("dd/MM/yyyy") ?? string.Empty,
                         Tipo = TipoDocumentoLegible(v.TipoComprobante),
                         Numero = v.NumComprobante,
+                        DocAfectado = "",
                         RucRelacionado = v.IdCliente,
                         NombreRelacionado = v.RazonSocialCliente,
                         Base0 = v.BaseImponible ?? 0,
@@ -204,7 +240,42 @@ namespace AtsManager.Pages.Reportes
                         Retencion = (v.valRetIVA ?? 0) + (v.valRetRenta ?? 0),
                         LinkPdf = ConstruirLinkPdf(TipoDocumentoLegible(v.TipoComprobante), v.Estab ?? "001", v.PtoEmi ?? "001", v.NumComprobante, v.IdCliente, v.FechaEmision, Contexto)
                     }).ToList();
+
+                    Filas.AddRange(filasVentas);
                 }
+
+                if (string.IsNullOrEmpty(TipoDocumento) || TipoDocumento == "RETENCION" || TipoDocumento == "RETENCION_EMITIDA")
+                {
+                    // Cargar retenciones emitidas (tabla RetencionesClientes)
+                    var queryRetencionesEmitidas = _db.RetencionesClientes
+                        .Where(r => r.RucEmpresa == RucEmpresa && r.Anio == Anio);
+
+                    if (Mes > 0)
+                        queryRetencionesEmitidas = queryRetencionesEmitidas.Where(r => r.Mes == Mes);
+
+                    var retencionesEmitidas = await queryRetencionesEmitidas.OrderBy(r => r.FechaRetencion).ToListAsync();
+
+                    var filasRetenciones = retencionesEmitidas.Select(r => new ReporteFila
+                    {
+                        Fecha = r.FechaRetencion?.ToString("dd/MM/yyyy") ?? string.Empty,
+                        Tipo = "Retención",
+                        Numero = r.NumRetencionCompleto,
+                        DocAfectado = string.IsNullOrWhiteSpace(r.DocAfectado) ? "0000000000" : r.DocAfectado,
+                        RucRelacionado = r.RucEmisor,
+                        NombreRelacionado = r.RazonSocialEmisor,
+                        Base0 = 0,
+                        BaseGravada = r.BaseImpGrav ?? 0,
+                        Iva = r.ValRetIva ?? 0,
+                        Total = ((r.BaseImpGrav ?? 0) + (r.BaseImpAir ?? 0)),
+                        Retencion = (r.ValRetIva ?? 0) + (r.ValRetRenta ?? 0),
+                        LinkPdf = ConstruirLinkPdf("RETENCION", r.NumRetencionCompleto?.Split('-').FirstOrDefault() ?? "001", r.NumRetencionCompleto?.Split('-').Skip(1).FirstOrDefault() ?? "001", r.NumRetencion ?? "", r.RucEmisor, r.FechaRetencion, Contexto)
+                    }).ToList();
+
+                    Filas.AddRange(filasRetenciones);
+                }
+
+                // Ordenar por fecha
+                Filas = Filas.OrderBy(f => f.Fecha).ToList();
             }
 
             TotalBase0 = Filas.Sum(f => f.Base0);
@@ -240,6 +311,7 @@ namespace AtsManager.Pages.Reportes
             public string Fecha { get; set; } = string.Empty;
             public string Tipo { get; set; } = string.Empty;
             public string Numero { get; set; } = string.Empty;
+            public string DocAfectado { get; set; } = string.Empty;
             public string RucRelacionado { get; set; } = string.Empty;
             public string NombreRelacionado { get; set; } = string.Empty;
             public decimal Base0 { get; set; }
@@ -250,7 +322,7 @@ namespace AtsManager.Pages.Reportes
             public string LinkPdf { get; set; } = string.Empty;
         }
 
-        private const string PdfBasePath = @"C:\Users\patri\Downloads\SRI\salida_sri";
+        private const string PdfBasePath = @"C:\descargasSRI";
 
         private string ConstruirLinkPdf(string tipo, string estab, string ptoEmi, string numComprobante, string rucRelacionado, DateTime? fecha, string contexto)
         {
@@ -280,25 +352,36 @@ namespace AtsManager.Pages.Reportes
                     secuencial = partes[2];
                 }
             }
+            else if (numComprobante.Length >= 9)
+            {
+                secuencial = numComprobante.Substring(numComprobante.Length - 9);
+            }
 
             if (string.IsNullOrEmpty(estabFinal) || estabFinal == "0") estabFinal = "001";
             if (string.IsNullOrEmpty(ptoEmiFinal) || ptoEmiFinal == "0") ptoEmiFinal = "001";
 
-            string carpeta = Path.Combine(PdfBasePath, $"RUC_{RucEmpresa}", contexto, $"{fecha.Value:yyyy-MM}");
-            if (!Directory.Exists(carpeta))
-                return string.Empty;
-
-            var archivos = Directory.GetFiles(carpeta, "*.pdf");
-            
             string secuencialLimpio = secuencial.TrimStart('0');
-            
-            foreach (var archivo in archivos)
+            string mes = $"{fecha.Value:yyyy-MM}";
+            string[] carpetas = contexto == "EMITIDOS" 
+                ? new[] { "EMITIDOS", "RECIBIDOS" } 
+                : new[] { "RECIBIDOS", "EMITIDOS" };
+
+            foreach (var carpetaBase in carpetas)
             {
-                string nombre = Path.GetFileName(archivo);
-                if (nombre.StartsWith(tipoArchivo + "-"))
+                string carpeta = Path.Combine(PdfBasePath, RucEmpresa, carpetaBase, mes);
+                if (!Directory.Exists(carpeta))
+                    continue;
+
+                var archivos = Directory.GetFiles(carpeta, "*.pdf");
+                
+                foreach (var archivo in archivos)
                 {
-                    if (nombre.Contains("-" + secuencial + "-") || nombre.Contains("-" + secuencialLimpio + "-"))
-                        return archivo;
+                    string nombre = Path.GetFileName(archivo);
+                    if (nombre.StartsWith(tipoArchivo + "-"))
+                    {
+                        if (nombre.Contains("-" + secuencial + "-") || nombre.Contains("-" + secuencialLimpio + "-"))
+                            return PdfLinkHelper.GetUrl(archivo);
+                    }
                 }
             }
 

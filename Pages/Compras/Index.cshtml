@@ -1,100 +1,223 @@
-﻿@page
+@page
 @model AtsManager.Pages.Compras.IndexModel
 @using System.Globalization
 
-<div class="max-w-full mx-auto p-4">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-3xl font-extrabold text-gray-900">Listado de Compras</h1>
-            <p class="text-sm text-gray-500 mt-1">Total registros: @Model.TotalRegistros</p>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-shopping-cart text-indigo-600 mr-3"></i>
+                    @Model.Titulo
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">Gestión de compras y documentos recibidos</p>
+            </div>
+            <div class="flex gap-3">
+                <a asp-page="/Dashboard" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium transition-colors">
+                    <i class="fas fa-home mr-2"></i>Dashboard
+                </a>
+                <a asp-page="Create" asp-route-tipo="@Model.Tipo" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium shadow-sm transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Nuevo
+                </a>
+            </div>
         </div>
-        <a asp-page="Create" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Nueva Compra Manual
-        </a>
+
+        <!-- Filtros rápidos -->
+        <div class="px-6 py-3 bg-gray-50 flex gap-2">
+            <a asp-route-tipo="" class="px-3 py-1 rounded text-xs font-medium @(string.IsNullOrEmpty(Model.Tipo) ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-100")">
+                Todos
+            </a>
+            <a asp-route-tipo="01" class="px-3 py-1 rounded text-xs font-medium @(Model.Tipo == "01" ? "bg-green-600 text-white" : "bg-white text-gray-600 hover:bg-gray-100")">
+                <i class="fas fa-file-invoice text-green-500 mr-1"></i>Facturas
+            </a>
+            <a asp-route-tipo="04" class="px-3 py-1 rounded text-xs font-medium @(Model.Tipo == "04" ? "bg-pink-600 text-white" : "bg-white text-gray-600 hover:bg-gray-100")">
+                <i class="fas fa-file-alt text-pink-500 mr-1"></i>Notas Crédito
+            </a>
+            <a asp-route-tipo="05" class="px-3 py-1 rounded text-xs font-medium @(Model.Tipo == "05" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-100")">
+                <i class="fas fa-file-alt text-blue-500 mr-1"></i>Notas Débito
+            </a>
+            <a asp-page="/RetencionesCompras/Index" class="px-3 py-1 rounded text-xs font-medium bg-white text-gray-600 hover:bg-gray-100 border border-dashed border-gray-300">
+                <i class="fas fa-percentage text-purple-500 mr-1"></i>Ret. Compras
+            </a>
+        </div>
     </div>
 
-    @* Mostrar mensaje de éxito/error (usando TempData) *@
+    <!-- Mensaje -->
     @if (!string.IsNullOrEmpty(Model.MensajeProceso))
     {
-        <div class="p-4 rounded-lg border-l-4 mb-6 font-semibold @(Model.MensajeProceso.StartsWith("ERROR") ? "bg-red-100 text-red-800 border-red-500" : "bg-green-100 text-green-800 border-green-500")">
-            @Model.MensajeProceso
-        </div> 
+        <div class="mb-4 p-4 rounded-lg border-l-4 @(Model.MensajeProceso.StartsWith("ERROR") ? "bg-red-100 text-red-800 border-red-500" : "bg-green-100 text-green-800 border-green-500")">
+            <div class="flex items-center">
+                <i class="fas @(Model.MensajeProceso.StartsWith("ERROR") ? "fa-exclamation-circle text-red-500" : "fa-check-circle text-green-500") mr-2"></i>
+                @Model.MensajeProceso
+            </div>
+        </div>
     }
 
-    <div class="shadow border-b border-gray-200 sm:rounded-lg overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Periodo</th>
-                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprobante</th>
-                    <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
-                    <th scope="col" class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Base 0%</th>
-                    <th scope="col" class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Base 12%/15%</th>
-                    <th scope="col" class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
-                    <th scope="col" class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                    <th scope="col" class="relative px-2 py-2">
-                        <span class="sr-only">Acciones</span>
-                    </th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @foreach (var item in Model.Compra)
-                {
-                    <tr>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">
-                            @item.Anio/@item.Mes.GetValueOrDefault().ToString("00")
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                            @item.FechaEmision.GetValueOrDefault().ToString("dd/MM/yy")
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                            @{
-                                var tipo = item.TipoComprobante;
-                                string tipoLegible = tipo switch {
-                                    "01" => "FC",
-                                    "04" => "NC",
-                                    "05" => "ND",
-                                    _ => tipo ?? ""
-                                };
-                            }
-                            @tipoLegible
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                            @item.NumComprobante
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500">
-                            @item.IdProveedor - @item.RazonSocialProveedor
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900">
-                            @item.BaseImponible.GetValueOrDefault().ToString("N2", CultureInfo.InvariantCulture)
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900">
-                            @item.BaseImpGrav.GetValueOrDefault().ToString("N2", CultureInfo.InvariantCulture)
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900">
-                            @item.MontoIva.GetValueOrDefault().ToString("N2", CultureInfo.InvariantCulture)
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-xs text-right font-bold text-gray-900">
-                            @item.MontoTotal.GetValueOrDefault().ToString("N2", CultureInfo.InvariantCulture)
-                        </td>
-                        <td class="px-2 py-2 whitespace-nowrap text-right text-xs font-medium">
-                            <a asp-page="./Edit" asp-route-id="@item.Id" class="text-indigo-600 hover:text-indigo-900 mr-2">Editar</a>
-                            <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" style="display:inline;" onsubmit="return confirm('Eliminar?');">
-                                <button type="submit" class="text-red-600 hover:text-red-900">X</button>
-                            </form>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
+    <!-- Tabla -->
+    @if (Model.Compra != null && Model.Compra.Any())
+    {
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto" style="max-height: 600px; overflow-y: auto;">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?Tipo=@Model.Tipo&SortField=Fecha&SortOrder=@(Model.SortField=="Fecha" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                <i class="fas fa-calendar mr-1"></i>Fecha <i class="@Model.GetSortIcon("Fecha")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?Tipo=@Model.Tipo&SortField=Tipo&SortOrder=@(Model.SortField=="Tipo" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                Tipo <i class="@Model.GetSortIcon("Tipo")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?Tipo=@Model.Tipo&SortField=NumComprobante&SortOrder=@(Model.SortField=="NumComprobante" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                <i class="fas fa-file-alt mr-1"></i>Comprobante <i class="@Model.GetSortIcon("NumComprobante")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?Tipo=@Model.Tipo&SortField=Proveedor&SortOrder=@(Model.SortField=="Proveedor" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                <i class="fas fa-building mr-1"></i>Proveedor <i class="@Model.GetSortIcon("Proveedor")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?Tipo=@Model.Tipo&SortField=Base0&SortOrder=@(Model.SortField=="Base0" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                Base 0% <i class="@Model.GetSortIcon("Base0")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?Tipo=@Model.Tipo&SortField=Base15&SortOrder=@(Model.SortField=="Base15" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                Base 15% <i class="@Model.GetSortIcon("Base15")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?Tipo=@Model.Tipo&SortField=IVA&SortOrder=@(Model.SortField=="IVA" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                IVA <i class="@Model.GetSortIcon("IVA")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onclick="window.location.href='?Tipo=@Model.Tipo&SortField=Total&SortOrder=@(Model.SortField=="Total" && Model.SortOrder=="desc" ? "asc" : "desc")'">
+                                <i class="fas fa-dollar-sign mr-1"></i>Total <i class="@Model.GetSortIcon("Total")"></i>
+                            </th>
+                            <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach (var item in Model.Compra)
+                        {
+                            var pdfPath = Model.GetPdfLink(item);
+                            <tr class="hover:bg-indigo-50 transition-colors">
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
+                                    @item.FechaEmision?.ToString("dd/MM/yyyy")
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap">
+                                    @{
+                                        var tipo = item.TipoComprobante;
+                                        string tipoLegible = tipo switch {
+                                            "01" => "FC",
+                                            "04" => "NC",
+                                            "05" => "ND",
+                                            _ => tipo ?? ""
+                                        };
+                                        string colorClass = tipo switch {
+                                            "01" => "bg-green-100 text-green-800",
+                                            "04" => "bg-pink-100 text-pink-800",
+                                            "05" => "bg-blue-100 text-blue-800",
+                                            _ => "bg-gray-100 text-gray-800"
+                                        };
+                                    }
+                                    <span class="px-2 py-1 rounded-full text-xs font-semibold @colorClass">
+                                        @tipoLegible
+                                    </span>
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm">
+                                    @if (!string.IsNullOrEmpty(pdfPath))
+                                    {
+                                        <a href="@pdfPath" target="_blank" 
+                                           class="text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+                                            <i class="fas fa-file-pdf text-red-500 mr-2"></i>@item.NumComprobante
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-gray-700">@item.NumComprobante</span>
+                                    }
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900 font-medium truncate max-w-xs">@item.RazonSocialProveedor</div>
+                                    <div class="text-xs text-gray-500">@item.IdProveedor</div>
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                                    @string.Format("{0:N2}", (item.BaseImponible ?? 0) + (item.BaseNoGraIva ?? 0))
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                                    @item.BaseImpGrav?.ToString("N2")
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-600">
+                                    @item.MontoIva?.ToString("N2")
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-sm text-right font-bold text-gray-900">
+                                    @item.MontoTotal?.ToString("N2")
+                                </td>
+                                <td class="px-3 py-3 whitespace-nowrap text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <a asp-page="./Edit" asp-route-id="@item.Id" 
+                                           class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs font-medium transition-colors">
+                                            <i class="fas fa-edit mr-1"></i>Editar
+                                        </a>
+                                        <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" style="display:inline;" onsubmit="return confirm('¿Eliminar este registro?');">
+                                            <button type="submit" class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs font-medium transition-colors">
+                                                <i class="fas fa-trash mr-1"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <!-- Totales -->
+                    <tfoot class="bg-gray-100">
+                        <tr>
+                            <td colspan="4" class="px-3 py-3 text-right font-bold text-gray-700">TOTALES:</td>
+                            <td class="px-3 py-3 text-right font-bold text-gray-900">
+                                @string.Format("{0:N2}", Model.Compra.Sum(x => x.BaseImponible ?? 0) + Model.Compra.Sum(x => x.BaseNoGraIva ?? 0))
+                            </td>
+                            <td class="px-3 py-3 text-right font-bold text-gray-900">
+                                @Model.Compra.Sum(x => x.BaseImpGrav ?? 0).ToString("N2")
+                            </td>
+                            <td class="px-3 py-3 text-right font-bold text-gray-900">
+                                @Model.Compra.Sum(x => x.MontoIva ?? 0).ToString("N2")
+                            </td>
+                            <td class="px-3 py-3 text-right font-bold text-indigo-700 text-lg">
+                                @Model.Compra.Sum(x => x.MontoTotal ?? 0).ToString("N2")
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
 
-@section Scripts {
-    <script>
-        // Si tienes scripts de validación u otros, irían aquí.
-    </script>
-}
+        <!-- Resumen -->
+        <div class="mt-4 flex justify-between items-center text-sm text-gray-600">
+            <div class="flex items-center">
+                <i class="fas fa-database mr-2"></i>
+                Total: <strong class="ml-1">@Model.Compra.Count</strong> registros
+            </div>
+            <div class="flex gap-4">
+                <span class="flex items-center"><span class="w-3 h-3 bg-green-500 rounded mr-1"></span>Facturas</span>
+                <span class="flex items-center"><span class="w-3 h-3 bg-pink-500 rounded mr-1"></span>NC</span>
+                <span class="flex items-center"><span class="w-3 h-3 bg-blue-500 rounded mr-1"></span>ND</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Vacío -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                <i class="fas fa-inbox text-3xl text-gray-400"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No hay compras registradas</h3>
+            <p class="text-gray-500 mb-6">Comience agregando una nueva compra o descargando desde el SRI.</p>
+            <div class="flex justify-center gap-3">
+                <a asp-page="Create" asp-route-tipo="@Model.Tipo" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                    <i class="fas fa-plus mr-2"></i>Nuevo
+                </a>
+                <a asp-page="/Descargas/Index" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    <i class="fas fa-download mr-2"></i>Descargar SRI
+                </a>
+            </div>
+        </div>
+    }
+</div>

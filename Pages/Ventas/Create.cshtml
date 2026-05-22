@@ -47,20 +47,16 @@
         <input type="hidden" asp-for="RegistroVenta.UsuarioCreacion" />
         <input type="hidden" asp-for="RegistroVenta.TipoComprobante" />
         
-        @* -- SECCIÓN EMPRESA -- *@
+        @* -- SECCIÓN EMPRESA (auto-seleccionada) -- *@
         <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
             <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Empresa Emisora</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label asp-for="EmpresaId" class="block text-sm font-medium text-gray-700">Empresa</label>
-                    <select asp-for="EmpresaId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="0">Seleccione...</option>
-                        @foreach (var empresa in Model.Empresas)
-                        {
-                            <option value="@empresa.Id">@empresa.Ruc - @empresa.RazonSocial</option>
-                        }
-                    </select>
-                    <span asp-validation-for="EmpresaId" class="text-red-500 text-xs"></span>
+                    <label class="block text-sm font-medium text-gray-700">Empresa</label>
+                    <input type="text" class="mt-1 block w-full rounded-md bg-gray-100 border-gray-300 shadow-sm p-2 text-gray-700" 
+                           value="@Model.CurrentRucPublic - @Model.CurrentNombrePublic" readonly />
+                    <input type="hidden" asp-for="EmpresaId" />
+                    <span class="text-xs text-gray-500">Empresa global seleccionada automáticamente.</span>
                 </div>
             </div>
         </div>
@@ -70,11 +66,11 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <label asp-for="RegistroVenta.Anio" class="block text-sm font-medium text-gray-700">Año</label>
-                    <input asp-for="RegistroVenta.Anio" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                    <input asp-for="RegistroVenta.Anio" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
                 </div>
                 <div>
                     <label asp-for="RegistroVenta.Mes" class="block text-sm font-medium text-gray-700">Mes</label>
-                    <input asp-for="RegistroVenta.Mes" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                    <input asp-for="RegistroVenta.Mes" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
                 </div>
                 <div>
                     <label asp-for="RegistroVenta.FechaEmision" class="block text-sm font-medium text-gray-700">Fecha Emisión</label>
@@ -88,17 +84,43 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div>
                     <label asp-for="RegistroVenta.IdCliente" class="block text-sm font-medium text-gray-700">RUC/ID Cliente</label>
-                    <input asp-for="RegistroVenta.IdCliente" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
-                    <span class="text-xs text-gray-500">Valor precargado por la clave.</span>
+                    <input asp-for="RegistroVenta.IdCliente" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
                 </div>
                 <div>
                     <label asp-for="RegistroVenta.NumComprobante" class="block text-sm font-medium text-gray-700">No. Comprobante</label>
-                    <input asp-for="RegistroVenta.NumComprobante" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required readonly />
+                    <input asp-for="RegistroVenta.NumComprobante" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
                 </div>
             </div>
             <div class="mt-6">
                 <label asp-for="RegistroVenta.RazonSocialCliente" class="block text-sm font-medium text-gray-700">Razón Social</label>
                 <input asp-for="RegistroVenta.RazonSocialCliente" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
+            </div>
+
+            @* DOCUMENTO MODIFICADO (para NC/ND) *@
+            <div class="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h3 class="text-sm font-semibold text-blue-800 mb-3">Documento Modificado (para Notas de Crédito/Débito)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div>
+                        <label asp-for="RegistroVenta.TipoComprobanteModificado" class="block text-xs font-medium text-gray-700">Tipo Doc. Modificado</label>
+                        <input asp-for="RegistroVenta.TipoComprobanteModificado" class="mt-1 block w-full rounded border-gray-300 p-2 text-sm" placeholder="01" />
+                    </div>
+                    <div>
+                        <label asp-for="RegistroVenta.EstablecimientoModificado" class="block text-xs font-medium text-gray-700">Estab. Modificado</label>
+                        <input asp-for="RegistroVenta.EstablecimientoModificado" class="mt-1 block w-full rounded border-gray-300 p-2 text-sm" placeholder="001" />
+                    </div>
+                    <div>
+                        <label asp-for="RegistroVenta.PuntoEmisionModificado" class="block text-xs font-medium text-gray-700">PtoEmi Modificado</label>
+                        <input asp-for="RegistroVenta.PuntoEmisionModificado" class="mt-1 block w-full rounded border-gray-300 p-2 text-sm" placeholder="001" />
+                    </div>
+                    <div>
+                        <label asp-for="RegistroVenta.SecuencialModificado" class="block text-xs font-medium text-gray-700">Secuencial Modificado</label>
+                        <input asp-for="RegistroVenta.SecuencialModificado" class="mt-1 block w-full rounded border-gray-300 p-2 text-sm" placeholder="000000001" />
+                    </div>
+                    <div>
+                        <label asp-for="RegistroVenta.AutorizacionModificada" class="block text-xs font-medium text-gray-700">Autorización (37+ dígitos)</label>
+                        <input asp-for="RegistroVenta.AutorizacionModificada" class="mt-1 block w-full rounded border-gray-300 p-2 text-sm" placeholder="0010010000000010000000001..." />
+                    </div>
+                </div>
             </div>
             
         </div>

@@ -1,98 +1,137 @@
-﻿@page
+@page
 @model AtsManager.Pages.Reportes.ExportarModel
 @using System.Globalization
 
-<div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-    <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
-        Generar y Exportar ATS (XML)
-    </h1>
-    <p class="text-gray-500 mb-8">
-        Seleccione el MES y AÑO que desea exportar al archivo XML.
-    </p>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    @* Mostrar mensaje de proceso (éxito o error) *@
-    @if (!string.IsNullOrEmpty(Model.Mensaje))
-    {
-        <div class="message-box @(Model.Mensaje.StartsWith("ERROR") ? "error" : "success") mb-6 p-4 rounded-lg border-l-4 font-semibold @(Model.Mensaje.StartsWith("ERROR") ? "bg-red-100 text-red-800 border-red-500" : "bg-green-100 text-green-800 border-green-500")">
-            @Model.Mensaje
-        </div>
-    }
-
-    <form method="post" asp-page-handler="Exportar" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50 p-6 rounded-lg border">
-            <div>
-                <label asp-for="EmpresaId" class="block text-sm font-medium text-gray-700">
-                    Empresa
-                </label>
-                <select asp-for="EmpresaId" 
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                    <option value="">-- Seleccionar Empresa --</option>
-                    @foreach (var empresa in Model.Empresas)
-                    {
-                        <option value="@empresa.Id">@empresa.Ruc - @empresa.RazonSocial</option>
-                    }
-                </select>
-            </div>
-
-            <div>
-                <label asp-for="RucOverride" class="block text-sm font-medium text-gray-700">
-                    RUC (manual)
-                </label>
-                <input asp-for="RucOverride"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                       placeholder="Ej: 1790012345001" />
-            </div>
+<div class="min-h-screen p-4 sm:p-8">
+    <div class="max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
+                <div class="bg-gradient-to-br from-green-500 to-emerald-600 p-3 rounded-xl text-white shadow-lg">
+                    <i class="fas fa-file-export"></i>
+                </div>
+                Exportar Anexo Transaccional
+            </h1>
+            <p class="text-gray-500 mt-2 ml-1">Genere el archivo XML del ATS para presentar al SRI</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-lg">
-            <div>
-                <label asp-for="RazonSocialOverride" class="block text-sm font-medium text-gray-700">
-                    Razón Social (manual)
-                </label>
-                <input asp-for="RazonSocialOverride"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                       placeholder="EMPRESA EJEMPLO S.A." />
+        @* Mensaje de proceso *@
+        @if (!string.IsNullOrEmpty(Model.Mensaje))
+        {
+            var isError = Model.Mensaje.StartsWith("ERROR") || Model.Mensaje.StartsWith("ADVERTENCIA");
+            <div class="mb-6 p-4 rounded-lg border-l-4 @(isError ? "bg-red-50 text-red-800 border-red-500" : "bg-green-50 text-green-800 border-green-500")">
+                <div class="flex items-center gap-2">
+                    <i class="fas @(isError ? "fa-exclamation-circle" : "fa-check-circle")"></i>
+                    <span class="font-semibold">@Model.Mensaje</span>
+                </div>
             </div>
+        }
 
-            <div>
-                <label asp-for="Anio" class="block text-sm font-medium text-gray-700">Año Fiscal</label>
-                <select asp-for="Anio" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
-                    @{
-                        var currentYear = DateTime.Now.Year;
-                        for (int i = currentYear - 5; i <= currentYear + 1; i++)
-                        {
-                            <option value="@i">@i</option>
+        <!-- Filtros -->
+        <form method="get" class="mb-0">
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <div class="flex items-center gap-2 mb-4">
+                <i class="fas fa-filter text-gray-400"></i>
+                <span class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Período a Exportar</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Año</label>
+                    <select asp-for="Anio" name="anio" class="w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500" onchange="this.form.submit()">
+                        @{
+                            var currentYear = DateTime.Now.Year;
+                            for (int i = currentYear - 5; i <= currentYear + 1; i++)
+                            {
+                                <option value="@i" selected="@(i == Model.Anio)">@i</option>
+                            }
                         }
-                    }
-                </select>
-            </div>
+                    </select>
+                </div>
 
-            <div>
-                <label asp-for="Mes" class="block text-sm font-medium text-gray-700">Mes Fiscal</label>
-                <select asp-for="Mes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
-                    @for (int i = 1; i <= 12; i++)
-                    {
-                        <option value="@i">@i.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
-                    }
-                </select>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+                    <select asp-for="Mes" name="mes" class="w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500" onchange="this.form.submit()">
+                        @for (int i = 1; i <= 12; i++)
+                        {
+                            <option value="@i" selected="@(i == Model.Mes)">@i.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="flex items-end">
+                    <div class="w-full bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                        <span class="text-xs text-green-600 font-medium">Empresa activa</span>
+                        <p class="text-sm font-semibold text-gray-800 truncate">@Model.EmpresaNombre</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </form>
+
+        <!-- Botón Principal Exportar -->
+        <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-xl p-8 text-white mb-6">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="bg-white/20 p-4 rounded-xl backdrop-blur">
+                        <i class="fas fa-file-code text-3xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Archivo XML del ATS</h2>
+                        <p class="text-green-100 text-sm mt-1">Contiene: Compras, Ventas y Retenciones del período</p>
+                    </div>
+                </div>
+                <form method="post" asp-page-handler="Exportar" class="flex-shrink-0">
+                    <input type="hidden" name="anio" value="@Model.Anio" />
+                    <input type="hidden" name="mes" value="@Model.Mes" />
+                    <button type="submit" class="bg-white text-green-600 px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-50 hover:scale-105 transition-all flex items-center gap-3">
+                        <i class="fas fa-download"></i>
+                        Generar XML
+                    </button>
+                </form>
             </div>
         </div>
 
-        <div class="pt-5">
-            <button type="submit" class="w-full inline-flex justify-center py-3 px-4 border border-transparent shadow-sm text-lg font-bold rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out transform hover:scale-[1.01]">
-                <svg class="h-6 w-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                Generar y Descargar Archivo XML
-            </button>
+        <!-- Resumen de Documentos -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <i class="fas fa-info-circle text-blue-500"></i>
+                Contenido del ATS
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="border border-gray-200 rounded-xl p-4 hover:border-green-300 transition-colors">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="bg-green-100 p-2 rounded-lg">
+                            <i class="fas fa-shopping-cart text-green-600"></i>
+                        </div>
+                        <span class="font-semibold text-gray-700">Compras</span>
+                    </div>
+                    <p class="text-sm text-gray-500">Facturas, NC y ND de compras registradas</p>
+                </div>
+                <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-300 transition-colors">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="bg-blue-100 p-2 rounded-lg">
+                            <i class="fas fa-file-invoice text-blue-600"></i>
+                        </div>
+                        <span class="font-semibold text-gray-700">Ventas</span>
+                    </div>
+                    <p class="text-sm text-gray-500">Facturas, NC y ND de ventas emitidas</p>
+                </div>
+                <div class="border border-gray-200 rounded-xl p-4 hover:border-purple-300 transition-colors">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="bg-purple-100 p-2 rounded-lg">
+                            <i class="fas fa-receipt text-purple-600"></i>
+                        </div>
+                        <span class="font-semibold text-gray-700">Retenciones</span>
+                    </div>
+                    <p class="text-sm text-gray-500">Comprobantes de retención emitidos y recibidos</p>
+                </div>
+            </div>
         </div>
-    </form>
+
+    </div>
 </div>
-
-@section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Inicializa los select con el mes/año actual
-            document.getElementById('Mes').value = @Model.Mes;
-            document.getElementById('Anio').value = @Model.Anio;
-        });
-    </script>
-}

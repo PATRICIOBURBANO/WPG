@@ -1,5 +1,4 @@
-﻿using AtsManager.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +6,7 @@ using System.Linq;
 using System.Xml.Linq;
 using System.Globalization;
 using AtsManager.Services;
+using AtsManager.Pages.Empresas.Models;
 
 
 namespace AtsManager.Services
@@ -18,16 +18,52 @@ namespace AtsManager.Services
 
         private readonly AtsDbContext _context;
         private readonly ATSXmlGenerator _atsGenerator;
-
-        // Constructor, métodos auxiliares (GetFirstDescendant, GetChildValue, ObtenerFechaEmision) y ImportarDesdeCarpeta
-        // ... (Se mantienen sin cambios para brevedad)
-
-        // El resto de la clase XmlBatchImporter (métodos auxiliares) debe estar aquí.
+        private string? _rucOverride;
 
         public XmlBatchImporter(AtsDbContext context, ATSXmlGenerator atsGenerator)
         {
             _context = context;
             _atsGenerator = atsGenerator;
+        }
+
+        private bool DocumentoYaExiste(string rucEmpresa, string tipoDoc, string estab, string ptoEmi, string secuencial)
+        {
+            // Check Ventas
+            bool existeVenta = _context.Ventas.Any(v => 
+                v.RucEmpresa == rucEmpresa && 
+                v.Estab == estab && 
+                v.PtoEmi == ptoEmi && 
+                v.Secuencial == secuencial);
+            
+            if (existeVenta) return true;
+
+            // Check Compras
+            bool existeCompra = _context.Compras.Any(c => 
+                c.RucEmpresa == rucEmpresa && 
+                c.Estab == estab && 
+                c.PtoEmi == ptoEmi && 
+                c.Secuencial == secuencial);
+            
+            if (existeCompra) return true;
+
+            return false;
+        }
+
+        private bool RetencionYaExiste(string rucEmpresa, string numRetencion)
+        {
+            // Check Retenciones de Clientes
+            bool existeRetCliente = _context.RetencionesClientes.Any(r => 
+                r.RucEmpresa == rucEmpresa && 
+                r.NumRetencion == numRetencion);
+            
+            if (existeRetCliente) return true;
+
+            // Check Retenciones de Compras
+            bool existeRetCompra = _context.RetencionesCompras.Any(r => 
+                r.RucEmpresa == rucEmpresa && 
+                r.NumRetencion == numRetencion);
+            
+            return existeRetCompra;
         }
 
         private XElement? GetFirstDescendant(XDocument xmlDoc, string localName)
@@ -167,13 +203,44 @@ namespace AtsManager.Services
             string numComprobante = $"{estab}-{ptoEmi}-{secuencial}";
 
             // 💡 DECIMAL PARSING SEGURO
-            decimal.TryParse(GetChildValue(infoComprobante, "totalSinImpuestos") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal baseImp);
             decimal.TryParse(GetChildValue(infoComprobante, "importeTotal") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal montoTotal);
 
-            // 💡 IVA SUM SEGURO
-            decimal montoIva = xmlDoc.Descendants()
-                .Where(e => e.Name.LocalName.Equals("totalImpuesto", StringComparison.OrdinalIgnoreCase) && GetChildValue(e, "codigo") == "2")
-                .Sum(ti => decimal.Parse(GetChildValue(ti, "valor") ?? "0", System.Globalization.CultureInfo.InvariantCulture));
+            // 💡 Parse totalImpuesto by codigoPorcentaje to properly separate bases
+            // codigoPorcentaje: 0=tarifa0%, 2=no objeto, 3=exento, 4=tarifa15%, 6=ICE
+            decimal baseImpGrav = 0;
+            decimal baseImpTarifa0 = 0;
+            decimal baseNoGraIva = 0;
+            decimal montoIva = 0;
+            decimal montoIce = 0;
+
+            var impuestos = xmlDoc.Descendants()
+                .Where(e => e.Name.LocalName.Equals("totalImpuesto", StringComparison.OrdinalIgnoreCase) && GetChildValue(e, "codigo") == "2");
+
+            foreach (var impuesto in impuestos)
+            {
+                decimal.TryParse(GetChildValue(impuesto, "baseImponible") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal baseImponibleImp);
+                decimal.TryParse(GetChildValue(impuesto, "valor") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal valorImpuesto);
+                string codigoPorcentaje = GetChildValue(impuesto, "codigoPorcentaje") ?? "0";
+
+                switch (codigoPorcentaje)
+                {
+                    case "0": // Tarifa 0%
+                        baseImpTarifa0 += baseImponibleImp;
+                        break;
+                    case "2": // No objeto de IVA
+                    case "3": // Exento de IVA
+                        baseNoGraIva += baseImponibleImp;
+                        break;
+                    case "4": // Tarifa 15%
+                    case "5": // Tarifa diferente (sin uso en Ecuador actualmente)
+                        baseImpGrav += baseImponibleImp;
+                        montoIva += valorImpuesto;
+                        break;
+                    default:
+                        baseImpTarifa0 += baseImponibleImp;
+                        break;
+                }
+            }
 
             DateTime fechaEmision = ObtenerFechaEmision(xmlDoc) ?? DateTime.Now.Date;
             string tipoIdProv;
@@ -216,20 +283,16 @@ namespace AtsManager.Services
                 // Forma de pago
                 FormaPago = "01",
 
-                // Estos campos se llenan con los totales del XML
-                BaseImponible = baseImp, // VALOR_SIN_IMPUESTOS TOTAL
-                MontoTotal = montoTotal,
-                MontoIva = montoIva,
-                BaseImpGrav = baseImp,
-                BaseNoGraIva = montoTotal-baseImp-montoIva,
-
-
-                // BaseImpGrav y BaseNoGraIva quedan en NULL o 0.00m aquí, se llenan a continuación
+                // Campos de bases correctamente separados
+                BaseImpGrav = Math.Round(baseImpGrav, 2),
+                BaseImponible = Math.Round(baseImpTarifa0, 2), // Tarifa 0%
+                BaseNoGraIva = Math.Round(baseNoGraIva, 2),   // No objeto / Exento
+                MontoIva = Math.Round(montoIva, 2),
+                MontoIce = Math.Round(montoIce, 2),
+                MontoTotal = montoTotal
             };
-
-            // 🔑 APLICAR LA LÓGICA DE SEGREGACIÓN para llenar BaseImpGrav y BaseNoGraIva
            
-            resultados.Add($"DIAGNÓSTICO PERSISTENCIA - {compra.NumComprobante} | B. Gravada: {compra.BaseImpGrav} | B. No Gravada: {compra.BaseNoGraIva} | IVA: {compra.MontoIva}");
+            resultados.Add($"DIAGNÓSTICO PERSISTENCIA - {compra.NumComprobante} | B. Gravada: {compra.BaseImpGrav} | B. Tarifa0: {compra.BaseImponible} | B. NoObj: {compra.BaseNoGraIva} | IVA: {compra.MontoIva}");
             return compra;
         }
 
@@ -260,28 +323,55 @@ namespace AtsManager.Services
             string ptoEmiModificado = "";
             string secuencialModificado = "";
             string autorizacionModificada = "";
+            string numDocModificadoCompleto = "";
             
             // Leer datos del documento modificado desde los campos correctos
             string codDocModificado = GetChildValue(infoNotaCredito, "codDocModificado") ?? "";
             string numDocModificado = GetChildValue(infoNotaCredito, "numDocModificado") ?? "";
             
-            if (!string.IsNullOrEmpty(numDocModificado))
+            // Limpiar espacios en blanco
+            numDocModificado = numDocModificado?.Trim() ?? "";
+            
+            // Validar que tenga documento modificado válido
+            if (string.IsNullOrWhiteSpace(numDocModificado))
             {
+                // Si no hay documento modificado, usar valores por defecto
+                tipoModificado = "01";
+                estabModificado = "001";
+                ptoEmiModificado = "001";
+                secuencialModificado = "000000001";
+                numDocModificadoCompleto = "";
+            }
+            else
+            {
+                // Procesar el número de documento modificado
                 string limpio = numDocModificado.Replace("-", "").Replace(" ", "");
                 var digitos = new string(limpio.Where(char.IsDigit).ToArray());
+                
                 if (digitos.Length >= 15)
                 {
-                    tipoModificado = codDocModificado.Length >= 2 ? codDocModificado.Substring(0, 2) : "01";
-                    estabModificado = digitos.Length >= 3 ? digitos.Substring(0, 3) : "001";
-                    ptoEmiModificado = digitos.Length >= 6 ? digitos.Substring(3, 3) : "001";
-                    secuencialModificado = digitos.Length >= 15 ? digitos.Substring(6, 9) : "000000001";
+                    tipoModificado = !string.IsNullOrEmpty(codDocModificado) && codDocModificado.Length >= 2 ? codDocModificado.Substring(0, 2) : "01";
+                    estabModificado = digitos.Substring(0, 3);
+                    ptoEmiModificado = digitos.Substring(3, 3);
+                    secuencialModificado = digitos.Substring(6, 9);
+                    numDocModificadoCompleto = $"{estabModificado}-{ptoEmiModificado}-{secuencialModificado}";
                 }
                 else if (digitos.Length >= 9)
                 {
-                    tipoModificado = codDocModificado.Length >= 2 ? codDocModificado.Substring(0, 2) : "01";
+                    tipoModificado = !string.IsNullOrEmpty(codDocModificado) && codDocModificado.Length >= 2 ? codDocModificado.Substring(0, 2) : "01";
                     estabModificado = "001";
                     ptoEmiModificado = "001";
                     secuencialModificado = digitos.Substring(0, 9).PadLeft(9, '0');
+                    numDocModificadoCompleto = $"{estabModificado}-{ptoEmiModificado}-{secuencialModificado}";
+                }
+                else
+                {
+                    // Longitud insuficiente, usar valores por defecto
+                    tipoModificado = "01";
+                    estabModificado = "001";
+                    ptoEmiModificado = "001";
+                    secuencialModificado = "000000001";
+                    numDocModificadoCompleto = numDocModificado;
                 }
             }
 
@@ -293,12 +383,33 @@ namespace AtsManager.Services
                 formaPago = GetChildValue(infoPago, "formaPago") ?? "01";
             }
             
-            decimal.TryParse(GetChildValue(infoNotaCredito, "totalSinImpuestos") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal baseImp);
             decimal.TryParse(GetChildValue(infoNotaCredito, "importeTotal") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal montoTotal);
 
-            decimal montoIva = xmlDoc.Descendants()
-                .Where(e => e.Name.LocalName.Equals("totalImpuesto", StringComparison.OrdinalIgnoreCase) && GetChildValue(e, "codigo") == "2")
-                .Sum(ti => decimal.Parse(GetChildValue(ti, "valor") ?? "0", System.Globalization.CultureInfo.InvariantCulture));
+            // 💡 Parse totalImpuesto by codigoPorcentaje to properly separate bases
+            decimal baseImpGravNC = 0;
+            decimal baseImpTarifa0NC = 0;
+            decimal baseNoGraIvaNC = 0;
+            decimal montoIvaNC = 0;
+
+            var impuestosNC = xmlDoc.Descendants()
+                .Where(e => e.Name.LocalName.Equals("totalImpuesto", StringComparison.OrdinalIgnoreCase) && GetChildValue(e, "codigo") == "2");
+
+            foreach (var impuesto in impuestosNC)
+            {
+                decimal.TryParse(GetChildValue(impuesto, "baseImponible") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal baseImponibleImp);
+                decimal.TryParse(GetChildValue(impuesto, "valor") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal valorImpuesto);
+                string codigoPorcentaje = GetChildValue(impuesto, "codigoPorcentaje") ?? "0";
+                string tarifa = GetChildValue(impuesto, "tarifa") ?? codigoPorcentaje;
+
+                switch (tarifa)
+                {
+                    case "0": baseImpTarifa0NC += baseImponibleImp; break;
+                    case "2": case "3": baseNoGraIvaNC += baseImponibleImp; break;
+                    case "4": case "5": baseImpGravNC += baseImponibleImp; montoIvaNC += valorImpuesto; break;
+                    case "6": case "7": break;
+                    default: baseImpGravNC += baseImponibleImp; montoIvaNC += valorImpuesto; break;
+                }
+            }
 
             DateTime? fechaEmision = ObtenerFechaEmision(xmlDoc);
 
@@ -311,10 +422,12 @@ namespace AtsManager.Services
                 IdProveedor = rucProveedor,
                 RazonSocialProveedor = razonSocialProveedor,
                 TipoIdProveedor = rucProveedor.Length == 13 ? "01" : "02",
-                BaseImponible = baseImp,
-                MontoIva = montoIva,
+                BaseImpGrav = Math.Round(baseImpGravNC, 2),
+                BaseImponible = Math.Round(baseImpTarifa0NC, 2),
+                BaseNoGraIva = Math.Round(baseNoGraIvaNC, 2),
+                MontoIva = Math.Round(montoIvaNC, 2),
                 MontoTotal = montoTotal,
-                CodSustento = montoIva > 0 ? "01" : "02",
+                CodSustento = montoIvaNC > 0 ? "01" : "02",
                 FechaEmision = fechaEmision,
                 FechaRegistro = fechaEmision,
                 Anio = fechaEmision.HasValue ? (short)fechaEmision.Value.Year : (short)DateTime.Now.Year,
@@ -328,14 +441,13 @@ namespace AtsManager.Services
                 EstablecimientoModificado = estabModificado,
                 PuntoEmisionModificado = ptoEmiModificado,
                 SecuencialModificado = secuencialModificado,
-                AutorizacionModificada = "",
+                AutorizacionModificada = numDocModificadoCompleto,
                 // Forma de pago
                 FormaPago = formaPago,
                 UsuarioCreacion = "ImportacionXML",
                 FechaCreacion = DateTime.Now
             };
 
-            SegregarBasesImponibles(compra);
             return compra;
         }
 
@@ -360,12 +472,31 @@ namespace AtsManager.Services
             string secuencial = NormalizarSecuencial(GetChildValue(infoTributaria, "secuencial") ?? "");
             string numComprobante = $"{estab}-{ptoEmi}-{secuencial}";
 
-            decimal.TryParse(GetChildValue(infoNotaDebito, "totalSinImpuestos") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal baseImp);
             decimal.TryParse(GetChildValue(infoNotaDebito, "importeTotal") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal montoTotal);
 
-            decimal montoIva = xmlDoc.Descendants()
-                .Where(e => e.Name.LocalName.Equals("totalImpuesto", StringComparison.OrdinalIgnoreCase) && GetChildValue(e, "codigo") == "2")
-                .Sum(ti => decimal.Parse(GetChildValue(ti, "valor") ?? "0", System.Globalization.CultureInfo.InvariantCulture));
+            // 💡 Parse totalImpuesto by codigoPorcentaje to properly separate bases
+            decimal baseImpGravND = 0;
+            decimal baseImpTarifa0ND = 0;
+            decimal baseNoGraIvaND = 0;
+            decimal montoIvaND = 0;
+
+            var impuestosND = xmlDoc.Descendants()
+                .Where(e => e.Name.LocalName.Equals("totalImpuesto", StringComparison.OrdinalIgnoreCase) && GetChildValue(e, "codigo") == "2");
+
+            foreach (var impuesto in impuestosND)
+            {
+                decimal.TryParse(GetChildValue(impuesto, "baseImponible") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal baseImponibleImp);
+                decimal.TryParse(GetChildValue(impuesto, "valor") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal valorImpuesto);
+                string codigoPorcentaje = GetChildValue(impuesto, "codigoPorcentaje") ?? "0";
+                string tarifa = GetChildValue(impuesto, "tarifa") ?? codigoPorcentaje;
+
+                switch (tarifa)
+                {
+                    case "0": baseImpTarifa0ND += baseImponibleImp; break;
+                    case "4": case "6": case "7": baseNoGraIvaND += baseImponibleImp; break;
+                    default: baseImpGravND += baseImponibleImp; montoIvaND += valorImpuesto; break;
+                }
+            }
 
             DateTime? fechaEmision = ObtenerFechaEmision(xmlDoc);
 
@@ -378,10 +509,12 @@ namespace AtsManager.Services
                 IdProveedor = rucProveedor,
                 RazonSocialProveedor = razonSocialProveedor,
                 TipoIdProveedor = rucProveedor.Length == 13 ? "01" : "02",
-                BaseImponible = baseImp,
-                MontoIva = montoIva,
+                BaseImpGrav = Math.Round(baseImpGravND, 2),
+                BaseImponible = Math.Round(baseImpTarifa0ND, 2),
+                BaseNoGraIva = Math.Round(baseNoGraIvaND, 2),
+                MontoIva = Math.Round(montoIvaND, 2),
                 MontoTotal = montoTotal,
-                CodSustento = montoIva > 0 ? "01" : "02",
+                CodSustento = montoIvaND > 0 ? "01" : "02",
                 FechaEmision = fechaEmision,
                 FechaRegistro = fechaEmision,
                 Anio = fechaEmision.HasValue ? (short)fechaEmision.Value.Year : (short)DateTime.Now.Year,
@@ -394,7 +527,6 @@ namespace AtsManager.Services
                 FechaCreacion = DateTime.Now
             };
 
-            SegregarBasesImponibles(compra);
             return compra;
         }
 
@@ -416,28 +548,74 @@ namespace AtsManager.Services
             string idCliente = GetChildValue(infoFactura, "identificacionComprador") ?? "";
             string razonCliente = GetChildValue(infoFactura, "razonSocialComprador") ?? "";
 
-            decimal.TryParse(GetChildValue(infoFactura, "totalSinImpuestos") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal baseImp);
+            decimal.TryParse(GetChildValue(infoFactura, "totalSinImpuestos") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal totalSinImpuestos);
             decimal.TryParse(GetChildValue(infoFactura, "importeTotal") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal montoTotal);
 
+// Obtener IVA directamente del XML
             decimal montoIva = xmlDoc.Descendants()
                 .Where(e => e.Name.LocalName.Equals("totalImpuesto", StringComparison.OrdinalIgnoreCase) && GetChildValue(e, "codigo") == "2")
                 .Sum(ti => decimal.Parse(GetChildValue(ti, "valor") ?? "0", System.Globalization.CultureInfo.InvariantCulture));
 
+            // Obtener baseImponible del impuesto IVA (codigoPorcentaje=4 = 15%)
+            decimal baseImponibleIva = 0;
+            decimal baseImponibleTarifa0 = 0;
+            decimal baseImponibleExento = 0;
+            
+            var impuestos = xmlDoc.Descendants()
+                .Where(e => e.Name.LocalName.Equals("totalImpuesto", StringComparison.OrdinalIgnoreCase));
+            
+            var contador = 0;
+            foreach (var impuesto in impuestos)
+            {
+                var codigo = GetChildValue(impuesto, "codigo");
+                var codigoPorcentaje = GetChildValue(impuesto, "codigoPorcentaje") ?? "0";
+                decimal.TryParse(GetChildValue(impuesto, "baseImponible") ?? "0", System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal baseImp);
+                
+                resultados.Add($"DEBUG imp: cod={codigo}, pct={codigoPorcentaje}, base={baseImp}");
+                
+                if (codigo == "2")
+                {
+                    switch (codigoPorcentaje)
+                    {
+                        case "4": // Tarifa 15%
+                            baseImponibleIva += baseImp;
+                            break;
+                        case "0": // Tarifa 0%
+                            baseImponibleTarifa0 += baseImp;
+                            break;
+                        case "2": // No objeto de IVA
+                        case "3": // Exento de IVA
+                            baseImponibleExento += baseImp;
+                            break;
+                    }
+                }
+                contador++;
+            }
+            resultados.Add($"DEBUG total impuestos: {contador}, baseIva: {baseImponibleIva}");
+            
             DateTime? fechaEmision = ObtenerFechaEmision(xmlDoc);
 
-            // Calcular bases
-            decimal baseGravada = 0, baseNoGravada = 0;
-            if (montoIva > 0)
+            // ASIGNAR VALORES DIRECTAMENTE DEL XML (sin recalcular)
+            decimal baseGravada = baseImponibleIva;      // Base gravada 15%
+            decimal baseTarifa0 = baseImponibleTarifa0;  // Base tarifa 0%
+            decimal baseExenta = baseImponibleExento;    // Exento/No objeto
+            
+            // Calcular IVA automáticamente si es 0 pero hay base
+            // PERO solo si el TOTAL es diferente a la BASE (si son iguales = sin IVA)
+            if (montoIva == 0 && baseGravada > 0 && montoTotal > baseGravada)
             {
-                baseGravada = Math.Round(montoIva / 0.15m, 2);
-                baseNoGravada = baseImp - baseGravada;
-                if (baseNoGravada < 0) baseNoGravada = 0;
+                montoIva = Math.Round(baseGravada * 0.15m, 2);
+                resultados.Add($"DEBUG IVA: BaseGrav={baseGravada}, IVAcalculado={montoIva}");
             }
-            else
+            else if (montoTotal > 0 && montoTotal == baseGravada)
             {
-                baseNoGravada = baseImp;
+                // No hay IVA - montoTotal igual a baseGravada significa 0%
+                montoIva = 0;
+                baseGravada = 0;
+                baseTarifa0 = montoTotal;
+                resultados.Add($"DEBUG: Base=Total ({montoTotal}), sin IVA");
             }
-
+            
             var venta = new Venta
             {
                 RucEmpresa = rucEmpresa,
@@ -446,8 +624,9 @@ namespace AtsManager.Services
                 IdCliente = idCliente,
                 RazonSocialCliente = razonCliente,
                 TipoIdCliente = idCliente.Length == 13 ? "04" : idCliente.Length == 10 ? "05" : "06",
-                BaseImponible = baseNoGravada,
-                BaseImpGrav = baseGravada,
+                BaseImponible = baseTarifa0 + baseExenta,  // Tarifa 0% + Exento (para ATS)
+                BaseImpGrav = baseGravada,                  // Base gravada 15%
+                BaseNoGraIva = baseTarifa0 + baseExenta,   // Para UI: Base 0%
                 MontoIva = montoIva,
                 MontoTotal = montoTotal,
                 FechaEmision = fechaEmision,
@@ -474,6 +653,14 @@ namespace AtsManager.Services
 
             if (infoTributaria == null || infoNotaCredito == null) return null;
 
+            // Validar documento modificado
+            string numDocModificado = GetChildValue(infoNotaCredito, "numDocModificado") ?? "";
+            if (string.IsNullOrWhiteSpace(numDocModificado))
+            {
+                resultados.Add("ADVERTENCIA: Nota de Crédito sin documento modificado válido. Saltando.");
+                return null;
+            }
+
             string estab = NormalizarCodigo(GetChildValue(infoTributaria, "estab") ?? "", 3);
             string ptoEmi = NormalizarCodigo(GetChildValue(infoTributaria, "ptoEmi") ?? "", 3);
             string secuencial = NormalizarSecuencial(GetChildValue(infoTributaria, "secuencial") ?? "");
@@ -490,6 +677,36 @@ namespace AtsManager.Services
 
             DateTime? fechaEmision = ObtenerFechaEmision(xmlDoc);
 
+            // Extraer datos del documento modificado
+            string codDocModificado = GetChildValue(infoNotaCredito, "codDocModificado") ?? "";
+            string numDocModificadoTrim = numDocModificado?.Trim() ?? "";
+
+            string tipoModificado = "01";
+            string estabModificado = "001";
+            string ptoEmiModificado = "001";
+            string secuencialModificado = "000000001";
+
+            if (!string.IsNullOrWhiteSpace(numDocModificadoTrim))
+            {
+                string limpio = numDocModificadoTrim.Replace("-", "").Replace(" ", "");
+                var digitos = new string(limpio.Where(char.IsDigit).ToArray());
+
+                if (digitos.Length >= 15)
+                {
+                    tipoModificado = !string.IsNullOrEmpty(codDocModificado) && codDocModificado.Length >= 2 ? codDocModificado.Substring(0, 2) : "01";
+                    estabModificado = digitos.Substring(0, 3);
+                    ptoEmiModificado = digitos.Substring(3, 3);
+                    secuencialModificado = digitos.Substring(6, 9);
+                }
+                else if (digitos.Length >= 9)
+                {
+                    tipoModificado = !string.IsNullOrEmpty(codDocModificado) && codDocModificado.Length >= 2 ? codDocModificado.Substring(0, 2) : "01";
+                    estabModificado = "001";
+                    ptoEmiModificado = "001";
+                    secuencialModificado = digitos.Substring(0, 9).PadLeft(9, '0');
+                }
+            }
+
             var venta = new Venta
             {
                 RucEmpresa = rucEmpresa,
@@ -498,7 +715,7 @@ namespace AtsManager.Services
                 IdCliente = idCliente,
                 RazonSocialCliente = razonCliente,
                 TipoIdCliente = idCliente.Length == 13 ? "04" : idCliente.Length == 10 ? "05" : "06",
-                BaseImponible = baseImp,
+                BaseNoGraIva = montoIva > 0 ? Math.Round(baseImp - (montoIva / 0.15m), 2) : baseImp,
                 BaseImpGrav = montoIva > 0 ? Math.Round(montoIva / 0.15m, 2) : 0,
                 MontoIva = montoIva,
                 MontoTotal = montoTotal,
@@ -509,6 +726,12 @@ namespace AtsManager.Services
                 PtoEmi = ptoEmi,
                 Secuencial = secuencial,
                 FormaPago = "20",
+                // Datos del documento modificado
+                TipoComprobanteModificado = tipoModificado,
+                EstablecimientoModificado = estabModificado,
+                PuntoEmisionModificado = ptoEmiModificado,
+                SecuencialModificado = secuencialModificado,
+                AutorizacionModificada = numDocModificadoTrim,
                 UsuarioCreacion = "ImportacionXML",
                 FechaCreacion = DateTime.Now
             };
@@ -550,7 +773,7 @@ namespace AtsManager.Services
                 IdCliente = idCliente,
                 RazonSocialCliente = razonCliente,
                 TipoIdCliente = idCliente.Length == 13 ? "04" : idCliente.Length == 10 ? "05" : "06",
-                BaseImponible = baseImp,
+                BaseNoGraIva = montoIva > 0 ? Math.Round(baseImp - (montoIva / 0.15m), 2) : baseImp,
                 BaseImpGrav = montoIva > 0 ? Math.Round(montoIva / 0.15m, 2) : 0,
                 MontoIva = montoIva,
                 MontoTotal = montoTotal,
@@ -649,8 +872,9 @@ namespace AtsManager.Services
             return string.Equals(contextoCarga, CONTEXTO_RECIBIDOS, StringComparison.OrdinalIgnoreCase);
         }
 
-        private string ObtenerRucEmpresaCompra(XDocument xmlDoc, string rootName, string rucEmisor)
+        private string ObtenerRucEmpresaCompra(XDocument xmlDoc, string rootName, string rucEmisor, string? rucOverride = null)
         {
+            if (!string.IsNullOrEmpty(rucOverride)) return rucOverride;
             if (rootName == "comprobanteRetencion") return rucEmisor;
 
             XElement? info = rootName switch
@@ -664,8 +888,9 @@ namespace AtsManager.Services
             return info != null ? (GetChildValue(info, "identificacionComprador") ?? rucEmisor) : rucEmisor;
         }
 
-        private string ObtenerRucEmpresaVenta(XDocument xmlDoc, string rootName, string rucEmisor)
+        private string ObtenerRucEmpresaVenta(XDocument xmlDoc, string rootName, string rucEmisor, string? rucOverride = null)
         {
+            if (!string.IsNullOrEmpty(rucOverride)) return rucOverride;
             if (rootName == "comprobanteRetencion")
             {
                 var infoRet = GetFirstDescendant(xmlDoc, "infoCompRetencion");
@@ -675,10 +900,16 @@ namespace AtsManager.Services
             return rucEmisor;
         }
 
-        public List<string> ImportarDesdeCarpeta(string rutaCarpeta, string contextoCarga)
+        public List<string> ImportarDesdeCarpeta(string rutaCarpeta, string contextoCarga, string? rucEmpresaOverride = null, bool eliminarExistentes = true)
         {
             var resultados = new List<string>();
             contextoCarga = NormalizarContextoCarga(contextoCarga);
+            _rucOverride = rucEmpresaOverride;
+
+            if (!string.IsNullOrEmpty(rucEmpresaOverride))
+            {
+                resultados.Add($"Empresa override: {rucEmpresaOverride}");
+            }
 
             if (!Directory.Exists(rutaCarpeta))
             {
@@ -747,8 +978,11 @@ namespace AtsManager.Services
                     TipoArchivo = tipoArchivo,
                     TipoDocumento = contextoCarga,
                     NombreArchivo = $"Lote XML {contextoCarga} {anioActual}-{mesActual:00} - {DateTime.Now:yyyyMMddHHmmss}",
-                    FechaCarga = DateTime.Now
+                    FechaCarga = DateTime.Now,
+                    TotalRegistros = 0
                 };
+                _context.CargasLotes.Add(nuevoLote);
+                _context.SaveChanges();
             }
             else
             {
@@ -759,12 +993,28 @@ namespace AtsManager.Services
                 {
                     int deletedVentas = _context.Database.ExecuteSqlRaw($"DELETE FROM Ventas WHERE CargaLoteId = {loteIdExistente}");
                     int deletedCompras = _context.Database.ExecuteSqlRaw($"DELETE FROM Compras WHERE CargaLoteId = {loteIdExistente}");
-                    if (deletedVentas + deletedCompras > 0)
+                    int deletedRetClientes = _context.Database.ExecuteSqlRaw($"DELETE FROM RetencionesClientes WHERE CargaLoteId = {loteIdExistente}");
+                    int deletedRetCompras = _context.Database.ExecuteSqlRaw($"DELETE FROM RetencionesCompras WHERE CargaLoteId = {loteIdExistente}");
+                    if (deletedVentas + deletedCompras + deletedRetClientes + deletedRetCompras > 0)
                     {
-                        resultados.Add($"LIMPIEZA: Se eliminaron {deletedVentas + deletedCompras} registros previos del lote {loteIdExistente} ({contextoCarga}).");
+                        resultados.Add($"LIMPIEZA: Se eliminaron {deletedVentas + deletedCompras + deletedRetClientes + deletedRetCompras} registros previos del lote {loteIdExistente} ({contextoCarga}).");
                     }
-                    nuevoLote.TotalRegistros = 0;
+                    
+                    // Re-crear el lote para el contexto actual
+                    nuevoLote = new CargaLote
+                    {
+                        Id = loteIdExistente,
+                        Anio = anioActual,
+                        Mes = mesActual,
+                        TipoArchivo = tipoArchivo,
+                        TipoDocumento = contextoCarga,
+                        NombreArchivo = $"Lote XML {contextoCarga} {anioActual}-{mesActual:00} - {DateTime.Now:yyyyMMddHHmmss}",
+                        FechaCarga = DateTime.Now,
+                        TotalRegistros = 0
+                    };
                     _context.CargasLotes.Attach(nuevoLote);
+                    _context.Entry(nuevoLote).State = EntityState.Modified;
+                    _context.SaveChanges();
                 }
                 catch (Exception ex)
                 {
@@ -822,64 +1072,193 @@ namespace AtsManager.Services
                     {
                         if (EsRecibido(contextoCarga))
                         {
-                            var compra = ProcesarFactura(xmlDoc, resultados, ObtenerRucEmpresaCompra(xmlDoc, rootName, rucEmisor));
-                            if (compra != null) comprasNuevas.Add(compra);
-                            resultados.Add($"OK: Factura recibida registrada en COMPRAS ({fileName})");
+                            var compra = ProcesarFactura(xmlDoc, resultados, ObtenerRucEmpresaCompra(xmlDoc, rootName, rucEmisor, _rucOverride));
+                            if (compra != null)
+                            {
+                                // Buscar por NumComprobante único
+                                var numComprobanteBusqueda = compra.NumComprobante ?? "";
+                                var numSinGuiones = numComprobanteBusqueda.Replace("-", "");
+                                var todos = _context.Compras.Where(c => c.RucEmpresa == compra.RucEmpresa).ToList();
+                                var existente = todos.FirstOrDefault(c => 
+                                    c.NumComprobante == numComprobanteBusqueda || 
+                                    c.NumComprobante?.Replace("-", "") == numSinGuiones);
+                                
+                                if (existente != null)
+                                {
+                                    _context.Compras.Remove(existente);
+                                    resultados.Add($"ACTUALIZANDO: Factura existente, reemplazando ({fileName})");
+                                }
+                                else
+                                {
+                                    comprasNuevas.Add(compra);
+                                }
+                                resultados.Add($"OK: Factura recibida registrada en COMPRAS ({fileName})");
+                            }
                         }
                         else
                         {
-                            var venta = ProcesarFacturaComoVenta(xmlDoc, resultados, ObtenerRucEmpresaVenta(xmlDoc, rootName, rucEmisor));
-                            if (venta != null) ventasNuevas.Add(venta);
-                            resultados.Add($"OK: Factura emitida registrada en VENTAS ({fileName})");
+                            var venta = ProcesarFacturaComoVenta(xmlDoc, resultados, ObtenerRucEmpresaVenta(xmlDoc, rootName, rucEmisor, _rucOverride));
+                            if (venta != null)
+                            {
+                                // Buscar por NumComprobante único
+                                var numComprobanteBusqueda = venta.NumComprobante ?? "";
+                                var numSinGuiones = numComprobanteBusqueda.Replace("-", "");
+                                var todos = _context.Ventas.Where(v => v.RucEmpresa == venta.RucEmpresa).ToList();
+                                var existente = todos.FirstOrDefault(v => 
+                                    v.NumComprobante == numComprobanteBusqueda || 
+                                    v.NumComprobante?.Replace("-", "") == numSinGuiones);
+                                
+                                if (existente != null)
+                                {
+                                    _context.Ventas.Remove(existente);
+                                    resultados.Add($"ACTUALIZANDO: Factura existente, reemplazando ({fileName})");
+                                }
+                                else
+                                {
+                                    ventasNuevas.Add(venta);
+                                }
+                                resultados.Add($"OK: Factura emitida registrada en VENTAS ({fileName})");
+                            }
                         }
                     }
-                    else if (rootName == "notacredito")
+else if (rootName == "notacredito")
                     {
                         if (EsRecibido(contextoCarga))
                         {
-                            var compra = ProcesarNotaCredito(xmlDoc, resultados, ObtenerRucEmpresaCompra(xmlDoc, rootName, rucEmisor));
-                            if (compra != null) comprasNuevas.Add(compra);
-                            resultados.Add($"OK: Nota de crédito recibida registrada en COMPRAS ({fileName})");
+                            var compra = ProcesarNotaCredito(xmlDoc, resultados, ObtenerRucEmpresaCompra(xmlDoc, rootName, rucEmisor, _rucOverride));
+                            if (compra != null)
+                            {
+                                var numComprobanteBusqueda = compra.NumComprobante ?? "";
+                                var numSinGuiones = numComprobanteBusqueda.Replace("-", "");
+                                var todosC = _context.Compras.Where(c => c.RucEmpresa == compra.RucEmpresa).ToList();
+                                var existente = todosC.FirstOrDefault(c => 
+                                    c.NumComprobante == numComprobanteBusqueda || 
+                                    c.NumComprobante?.Replace("-", "") == numSinGuiones);
+                                
+                                if (existente != null)
+                                {
+                                    _context.Compras.Remove(existente);
+                                    resultados.Add($"ACTUALIZANDO: NC existente, reemplazando ({fileName})");
+                                }
+                                else
+                                {
+                                    comprasNuevas.Add(compra);
+                                }
+                                resultados.Add($"OK: Nota de crédito recibida registrada en COMPRAS ({fileName})");
+                            }
                         }
                         else
                         {
-                            var venta = ProcesarNotaCreditoComoVenta(xmlDoc, resultados, ObtenerRucEmpresaVenta(xmlDoc, rootName, rucEmisor));
-                            if (venta != null) ventasNuevas.Add(venta);
-                            resultados.Add($"OK: Nota de crédito emitida registrada en VENTAS ({fileName})");
+                            var venta = ProcesarNotaCreditoComoVenta(xmlDoc, resultados, ObtenerRucEmpresaVenta(xmlDoc, rootName, rucEmisor, _rucOverride));
+                            if (venta != null)
+                            {
+                                var numComprobanteBusqueda = venta.NumComprobante ?? "";
+                                var numSinGuiones = numComprobanteBusqueda.Replace("-", "");
+                                var todosV = _context.Ventas.Where(v => v.RucEmpresa == venta.RucEmpresa).ToList();
+                                var existente = todosV.FirstOrDefault(v => 
+                                    v.NumComprobante == numComprobanteBusqueda || 
+                                    v.NumComprobante?.Replace("-", "") == numSinGuiones);
+                                
+                                if (existente != null)
+                                {
+                                    _context.Ventas.Remove(existente);
+                                    resultados.Add($"ACTUALIZANDO: NC existente, reemplazando ({fileName})");
+                                }
+ventasNuevas.Add(venta);
+                                resultados.Add($"OK: Nota de crédito emitida registrada en VENTAS ({fileName})");
+                            }
                         }
                     }
                     else if (rootName == "notadebito")
                     {
                         if (EsRecibido(contextoCarga))
                         {
-                            var compra = ProcesarNotaDebito(xmlDoc, resultados, ObtenerRucEmpresaCompra(xmlDoc, rootName, rucEmisor));
-                            if (compra != null) comprasNuevas.Add(compra);
-                            resultados.Add($"OK: Nota de débito recibida registrada en COMPRAS ({fileName})");
+                            var compra = ProcesarNotaDebito(xmlDoc, resultados, ObtenerRucEmpresaCompra(xmlDoc, rootName, rucEmisor, _rucOverride));
+                            if (compra != null)
+                            {
+                                var existente = _context.Compras.FirstOrDefault(c => 
+                                    c.RucEmpresa == compra.RucEmpresa && 
+                                    c.TipoComprobante == "05" &&
+                                    c.Estab == compra.Estab && 
+                                    c.PtoEmi == compra.PtoEmi && 
+                                    c.Secuencial == compra.Secuencial);
+                                
+                                if (existente != null)
+                                {
+                                    _context.Compras.Remove(existente);
+                                    resultados.Add($"ACTUALIZANDO: ND existente, reemplazando ({fileName})");
+                                }
+                                comprasNuevas.Add(compra);
+                                resultados.Add($"OK: Nota de débito recibida registrada en COMPRAS ({fileName})");
+                            }
                         }
                         else
                         {
-                            var venta = ProcesarNotaDebitoComoVenta(xmlDoc, resultados, ObtenerRucEmpresaVenta(xmlDoc, rootName, rucEmisor));
-                            if (venta != null) ventasNuevas.Add(venta);
-                            resultados.Add($"OK: Nota de débito emitida registrada en VENTAS ({fileName})");
+                            var venta = ProcesarNotaDebitoComoVenta(xmlDoc, resultados, ObtenerRucEmpresaVenta(xmlDoc, rootName, rucEmisor, _rucOverride));
+                            if (venta != null)
+                            {
+                                var existente = _context.Ventas.FirstOrDefault(v => 
+                                    v.RucEmpresa == venta.RucEmpresa && 
+                                    v.TipoComprobante == "05" &&
+                                    v.Estab == venta.Estab && 
+                                    v.PtoEmi == venta.PtoEmi && 
+                                    v.Secuencial == venta.Secuencial);
+                                
+                                if (existente != null)
+                                {
+                                    _context.Ventas.Remove(existente);
+                                    resultados.Add($"ACTUALIZANDO: ND existente, reemplazando ({fileName})");
+                                }
+ventasNuevas.Add(venta);
+resultados.Add($"OK: Nota de débito emitida registrada en VENTAS ({fileName})");
+                            }
                         }
                     }
                     else if (rootName == "comprobanteRetencion")
                     {
-                        string rucEmpresa = EsRecibido(contextoCarga) 
-                            ? ObtenerRucEmpresaVenta(xmlDoc, rootName, rucEmisor)
-                            : ObtenerRucEmpresaCompra(xmlDoc, rootName, rucEmisor);
-                        
+                        // RECIBIDOS = customers issue retenciones TO US (income/VENTAS)
+                        // EMITIDOS = we issue retenciones TO SUPPLIERS (expense/COMPRAS)
                         if (EsRecibido(contextoCarga))
                         {
+                            // RECIBIDOS: retención de cliente (customer retained from us - income)
+                            string rucEmpresa = ObtenerRucEmpresaVenta(xmlDoc, rootName, rucEmisor, _rucOverride);
                             var retCliente = ProcesarRetencionClienteXML(xmlDoc, resultados, rucEmpresa);
-                            if (retCliente != null) retencionesClientesNuevas.Add(retCliente);
-                            resultados.Add($"OK: Retención de cliente registrada en RetencionesClientes ({fileName})");
+                            if (retCliente != null)
+                            {
+                                string numRet = (retCliente.NumRetencion ?? "").Replace("-", "");
+                                
+                                var existente = _context.RetencionesClientes
+                                    .FirstOrDefault(r => r.RucEmpresa == rucEmpresa && r.NumRetencion == numRet);
+                                if (existente != null)
+                                {
+                                    _context.RetencionesClientes.Remove(existente);
+                                    resultados.Add($"ACTUALIZANDO: Retención de cliente existente, reemplazando ({fileName})");
+                                }
+                                
+                                retencionesClientesNuevas.Add(retCliente);
+                                resultados.Add($"OK: Retención de cliente registrada en RetencionesClientes ({fileName})");
+                            }
                         }
                         else
                         {
+                            // EMITIDOS: retención a proveedor (we retained from supplier - expense)
+                            string rucEmpresa = ObtenerRucEmpresaCompra(xmlDoc, rootName, rucEmisor, _rucOverride);
                             var retCompra = ProcesarRetencionCompraXML(xmlDoc, resultados, rucEmpresa);
-                            if (retCompra != null) retencionesComprasNuevas.Add(retCompra);
-                            resultados.Add($"OK: Retención a proveedor registrada en RetencionesCompras ({fileName})");
+                            if (retCompra != null)
+                            {
+                                string numRet = (retCompra.NumRetencion ?? "").Replace("-", "");
+                                
+                                var existente = _context.RetencionesCompras
+                                    .FirstOrDefault(r => r.RucEmpresa == rucEmpresa && r.NumRetencion == numRet);
+                                if (existente != null)
+                                {
+                                    _context.RetencionesCompras.Remove(existente);
+                                    resultados.Add($"ACTUALIZANDO: Retención de proveedor existente, reemplazando ({fileName})");
+                                }
+                                
+                                retencionesComprasNuevas.Add(retCompra);
+                                resultados.Add($"OK: Retención a proveedor registrada en RetencionesCompras ({fileName})");
+                            }
                         }
                     }
                     else
@@ -896,26 +1275,10 @@ namespace AtsManager.Services
             int totalRegistros = ventasNuevas.Count + ventasActualizadas.Count + comprasNuevas.Count + retencionesClientesNuevas.Count + retencionesComprasNuevas.Count;
             if (totalRegistros > 0)
             {
-                if (nuevoLote.Id == 0)
-                {
-                    nuevoLote.TotalRegistros = totalRegistros;
-                    _context.CargasLotes.Add(nuevoLote);
-                    try
-                    {
-                        _context.SaveChanges();
-                    }
-                    catch (Exception ex)
-                    {
-                        resultados.Add($"❌ ERROR CRÍTICO DE BD (Lote padre): {ex.InnerException?.Message ?? ex.Message}");
-                        return resultados;
-                    }
-                }
-                else
-                {
-                    nuevoLote.TotalRegistros += totalRegistros;
-                    nuevoLote.TipoDocumento = contextoCarga;
-                    _context.CargasLotes.Update(nuevoLote);
-                }
+                // Update the lote with final count
+                nuevoLote.TotalRegistros = totalRegistros;
+                nuevoLote.TipoDocumento = contextoCarga;
+                _context.CargasLotes.Update(nuevoLote);
 
                 int loteIdReal = nuevoLote.Id;
                 foreach (var compra in comprasNuevas) compra.CargaLoteId = loteIdReal;
@@ -1164,12 +1527,20 @@ namespace AtsManager.Services
             {
                 var infoTributaria = GetFirstDescendant(xmlDoc, "infoTributaria");
                 var infoCompRetencion = GetFirstDescendant(xmlDoc, "infoCompRetencion");
+                var docsSustento = GetFirstDescendant(xmlDoc, "docsSustento");
 
                 if (infoTributaria == null || infoCompRetencion == null)
                 {
                     resultados.Add("ADVERTENCIA: No se encontró infoTributaria o infoCompRetencion en el XML.");
                     return null;
                 }
+
+                // Debug: ver estructura
+                var allElements = xmlDoc.Descendants().Select(e => e.Name.LocalName).Distinct().ToList();
+                resultados.Add($"DEBUG XML elements: {string.Join(",", allElements.Take(10))}");
+
+                // El RUC del emisor de la retención viene en infoTributaria/ruc
+                string rucEmisor = GetChildValue(infoTributaria, "ruc") ?? "";
 
                 string estab = NormalizarCodigo(GetChildValue(infoTributaria, "estab") ?? "", 3);
                 string ptoEmi = GetChildValue(infoTributaria, "ptoEmi") ?? "001";
@@ -1178,40 +1549,120 @@ namespace AtsManager.Services
 
                 var fechaRetencion = ObtenerFechaEmision(xmlDoc);
 
-                string docAfectado = GetChildValue(infoCompRetencion, "numDocSustento") ?? "";
+                // El documento afectado está en docsSustento/docSustento/numDocSustento
+                string docAfectado = "";
                 DateTime? fechaDocAfectado = null;
-                string fechaDocStr = GetChildValue(infoCompRetencion, "fechaEmisionDocSustento") ?? "";
-                if (!string.IsNullOrEmpty(fechaDocStr) && DateTime.TryParseExact(fechaDocStr, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var f))
-                    fechaDocAfectado = f;
+                decimal totalSinImpuestos = 0;
+                decimal importeTotal = 0;
+                
+                // Para RECIBIDOS: el cliente (quien nos retuvo) está en infoTributaria
+                // identificacionSujetoRetenido es NOSOTROS (el retenido)
+                string rucCliente = rucEmisor;  // El emisor del XML es quien nos retuvo
+                string razonCliente = GetChildValue(infoTributaria, "razonSocial") ?? "";
 
-                var impuestos = xmlDoc.Descendants().Where(e => e.Name.LocalName.Equals("impuesto", StringComparison.OrdinalIgnoreCase));
+                if (docsSustento != null)
+                {
+                    var docSustento = docsSustento.Descendants()
+                        .FirstOrDefault(e => e.Name.LocalName.Equals("docSustento", StringComparison.OrdinalIgnoreCase));
+                    
+                    if (docSustento != null)
+                    {
+                        docAfectado = GetChildValue(docSustento, "numDocSustento") ?? "";
+                        string fechaDocStr = GetChildValue(docSustento, "fechaEmisionDocSustento") ?? "";
+                        if (!string.IsNullOrEmpty(fechaDocStr) && DateTime.TryParseExact(fechaDocStr, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var f))
+                            fechaDocAfectado = f;
 
-                decimal baseImpGrav = 0;
-                decimal baseImpAir = 0;
+                        var totalSinImpStr = GetChildValue(docSustento, "totalSinImpuestos") ?? "0";
+                        var importeTotalStr = GetChildValue(docSustento, "importeTotal") ?? "0";
+                        decimal.TryParse(totalSinImpStr, NumberStyles.Any, CultureInfo.InvariantCulture, out totalSinImpuestos);
+                        decimal.TryParse(importeTotalStr, NumberStyles.Any, CultureInfo.InvariantCulture, out importeTotal);
+                    }
+                }
+
+                // Também buscar numDocSustento nos impostos (onde está no XML do SRI)
+                if (string.IsNullOrEmpty(docAfectado))
+                {
+                    var firstImp = xmlDoc.Descendants()
+                        .FirstOrDefault(e => e.Name.LocalName.Equals("impuesto", StringComparison.OrdinalIgnoreCase));
+                    if (firstImp != null)
+                    {
+                        docAfectado = GetChildValue(firstImp, "numDocSustento") ?? "";
+                        string fechaDocStr = GetChildValue(firstImp, "fechaEmisionDocSustento") ?? "";
+                        if (!string.IsNullOrEmpty(fechaDocStr) && DateTime.TryParseExact(fechaDocStr, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var f))
+                            fechaDocAfectado = f;
+                    }
+                }
+
+                // Las retenciones están en docsSustento/docSustento/retenciones/retencion
+                decimal baseImpGrav = 0;  // Base IVA
+                decimal baseImpAir = 0;   // Base Renta
                 decimal valRetIva = 0;
                 decimal valRetRenta = 0;
                 decimal porcentajeAir = 0;
+                decimal porcentajeIva = 0;
+                string codRetAir = "332";
 
+                // Buscar impuestos en el nivel principal del XML (no en docsSustento)
+                var impuestos = xmlDoc.Descendants()
+                    .Where(e => e.Name.LocalName.Equals("impuesto", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                
+                // Si no hay en el nivel principal, buscar en docsSustento
+                if (!impuestos.Any() && docsSustento != null)
+                {
+                    impuestos = docsSustento.Descendants()
+                        .Where(e => e.Name.LocalName.Equals("retencion", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+                
                 foreach (var imp in impuestos)
                 {
                     string codigo = GetChildValue(imp, "codigo") ?? "";
-                    string codigoRet = GetChildValue(imp, "codigoRetencion") ?? "";
-                    decimal valorRetenido = decimal.Parse(GetChildValue(imp, "valorRetenido") ?? "0", CultureInfo.InvariantCulture);
-                    decimal baseImponible = decimal.Parse(GetChildValue(imp, "baseImponible") ?? "0", CultureInfo.InvariantCulture);
+                    string codRet = GetChildValue(imp, "codigoRetencion") ?? "";
+                    decimal baseImp = decimal.Parse(GetChildValue(imp, "baseImponible") ?? "0", CultureInfo.InvariantCulture);
+                    decimal pctRet = decimal.Parse(GetChildValue(imp, "porcentajeRetener")?.Trim() ?? "0", CultureInfo.InvariantCulture);
+                    decimal valRet = decimal.Parse(GetChildValue(imp, "valorRetenido") ?? "0", CultureInfo.InvariantCulture);
+
+                    // Siempre procesar
+                    bool esIva = codigo == "2";
+                    bool esRenta = codigo == "1";
                     
-                    if (codigo == "2" && !string.IsNullOrEmpty(codigoRet))
+                    if (esIva)
                     {
-                        baseImpGrav += baseImponible;
-                        valRetIva += valorRetenido;
+                        baseImpGrav += baseImp;
+                        valRetIva += valRet;
+                        if (baseImp > 0) porcentajeIva = pctRet;
                     }
-                    else if (codigo == "1" && !string.IsNullOrEmpty(codigoRet))
+                    else if (esRenta)
                     {
-                        baseImpAir += baseImponible;
-                        valRetRenta += valorRetenido;
-                        if (baseImponible > 0)
-                            porcentajeAir = Math.Round((valorRetenido / baseImponible) * 100, 2);
+                        baseImpAir += baseImp;
+                        valRetRenta += valRet;
+                        if (baseImp > 0)
+                        {
+                            porcentajeAir = pctRet;
+                            codRetAir = codRet;
+                        }
+}
+                    else
+                    {
+                        // Fallback: clasificar por porcentaje
+                        if (pctRet > 10)
+                        {
+                            baseImpGrav += baseImp;
+                            valRetIva += valRet;
+                            if (baseImp > 0) porcentajeIva = pctRet;
+                        }
+                        else
+                        {
+                            baseImpAir += baseImp;
+                            valRetRenta += valRet;
+                            if (baseImp > 0) porcentajeAir = pctRet;
+                        }
                     }
                 }
+
+                // Monto IVA = suma de valores de retención de IVA
+                decimal montoIva = valRetIva;
 
                 var periodoFiscal = GetChildValue(infoCompRetencion, "periodoFiscal") ?? "";
                 short anio = (short)DateTime.Now.Year;
@@ -1229,8 +1680,12 @@ namespace AtsManager.Services
                 return new RetencionCliente
                 {
                     RucEmpresa = rucEmpresa,
-                    IdCliente = GetChildValue(infoCompRetencion, "identificacionSujetoRetenido") ?? "",
-                    RazonSocialCliente = GetChildValue(infoCompRetencion, "razonSocialSujetoRetenido") ?? "",
+                    // Emisor de la retención (nuestra empresa)
+                    RucEmisor = rucEmisor,
+                    RazonSocialEmisor = GetChildValue(infoTributaria, "razonSocial") ?? "",
+                    // Cliente (quien recibe el servicio/documento - del doc sustentado)
+                    IdCliente = rucCliente,
+                    RazonSocialCliente = razonCliente,
                     DocAfectado = docAfectado,
                     FechaDocAfectado = fechaDocAfectado,
                     NumRetencionCompleto = numRetencionCompleto,
@@ -1238,9 +1693,11 @@ namespace AtsManager.Services
                     AutorizacionRetencion = GetChildValue(infoTributaria, "claveAcceso") ?? "",
                     FechaRetencion = fechaRetencion,
                     BaseImpGrav = baseImpGrav,
-                    MontoIva = 0,
+                    MontoIva = montoIva,
+                    PorcentajeIva = porcentajeIva,
                     BaseImpAir = baseImpAir,
                     PorcentajeAir = porcentajeAir,
+                    CodRetAir = codRetAir,
                     ValRetIva = valRetIva,
                     ValRetRenta = valRetRenta,
                     TotalRetencion = valRetIva + valRetRenta,
@@ -1294,27 +1751,61 @@ namespace AtsManager.Services
                 foreach (var imp in impuestos)
                 {
                     string codigo = GetChildValue(imp, "codigo") ?? "";
-                    string codigoRet = GetChildValue(imp, "codigoRetencion") ?? "";
                     decimal valorRetenido = decimal.Parse(GetChildValue(imp, "valorRetenido") ?? "0", CultureInfo.InvariantCulture);
                     decimal baseImponible = decimal.Parse(GetChildValue(imp, "baseImponible") ?? "0", CultureInfo.InvariantCulture);
                     
-                    if (codigo == "2" && !string.IsNullOrEmpty(codigoRet))
+                    if (valorRetenido > 0 || baseImponible > 0)
                     {
-                        baseImpGrav += baseImponible;
-                        valRetIva += valorRetenido;
+                        if (codigo == "2")
+                        {
+                            baseImpGrav += baseImponible;
+                            valRetIva += valorRetenido;
+                        }
+                        else if (codigo == "1")
+                        {
+                            baseImpAir += baseImponible;
+                            valRetRenta += valorRetenido;
+                            if (baseImponible > 0)
+                                porcentajeAir = Math.Round((valorRetenido / baseImponible) * 100, 2);
+                        }
                     }
-                    else if (codigo == "1" && !string.IsNullOrEmpty(codigoRet))
+                }
+
+                // Si no encontró impuestos, buscar en docsSustento/retenciones
+                if (valRetIva == 0 && valRetRenta == 0)
+                {
+                    var docsSustento = GetFirstDescendant(xmlDoc, "docsSustento");
+                    if (docsSustento != null)
                     {
-                        baseImpAir += baseImponible;
-                        valRetRenta += valorRetenido;
-                        if (baseImponible > 0)
-                            porcentajeAir = Math.Round((valorRetenido / baseImponible) * 100, 2);
+                        var retenciones = docsSustento.Descendants()
+                            .Where(e => e.Name.LocalName.Equals("retencion", StringComparison.OrdinalIgnoreCase));
+                        
+                        foreach (var ret in retenciones)
+                        {
+                            string codRet = GetChildValue(ret, "codigoRetencion") ?? "";
+                            decimal baseRet = decimal.Parse(GetChildValue(ret, "baseImponible") ?? "0", CultureInfo.InvariantCulture);
+                            decimal valorRet = decimal.Parse(GetChildValue(ret, "valorRetenido") ?? "0", CultureInfo.InvariantCulture);
+                            decimal pctRet = decimal.Parse(GetChildValue(ret, "porcentajeRetener") ?? "0", CultureInfo.InvariantCulture);
+                            
+                            if (pctRet > 10)
+                            {
+                                baseImpGrav += baseRet;
+                                valRetIva += valorRet;
+                            }
+                            else
+                            {
+                                baseImpAir += baseRet;
+                                valRetRenta += valorRet;
+                                if (baseRet > 0)
+                                    porcentajeAir = pctRet;
+                            }
+                        }
                     }
                 }
 
                 var periodoFiscal = GetChildValue(infoCompRetencion, "periodoFiscal") ?? "";
-                short anio = (short)DateTime.Now.Year;
-                short mes = (short)DateTime.Now.Month;
+                short anio = fechaRetencion.HasValue ? (short)fechaRetencion.Value.Year : (short)DateTime.Now.Year;
+                short mes = fechaRetencion.HasValue ? (short)fechaRetencion.Value.Month : (short)DateTime.Now.Month;
                 if (!string.IsNullOrEmpty(periodoFiscal) && periodoFiscal.Contains('/'))
                 {
                     var parts = periodoFiscal.Split('/');
@@ -1328,6 +1819,7 @@ namespace AtsManager.Services
                 return new RetencionCompra
                 {
                     RucEmpresa = rucEmpresa,
+                    // Proveedor (quien recibe la retención - está en infoCompRetencion)
                     IdProveedor = GetChildValue(infoCompRetencion, "identificacionSujetoRetenido") ?? "",
                     RazonSocialProveedor = GetChildValue(infoCompRetencion, "razonSocialSujetoRetenido") ?? "",
                     DocAfectado = docAfectado,

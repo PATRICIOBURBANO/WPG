@@ -1,6 +1,7 @@
-﻿using AtsManager.Models;
+﻿using AtsManager.Pages.Empresas.Models;
 using AtsManager.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,26 +20,16 @@ builder.Services.AddDbContext<AtsDbContext>(options =>
     )
 );
 
-// =====================================================
-// CONFIGURACIÓN DE SERVICIOS PROPIOS
-// =====================================================
-
+// Obtener configuración del contribuyente
 var ruc = builder.Configuration["Contribuyente:Ruc"];
 var razonSocial = builder.Configuration["Contribuyente:RazonSocial"];
 
-if (string.IsNullOrWhiteSpace(ruc) || string.IsNullOrWhiteSpace(razonSocial))
-{
-    throw new InvalidOperationException(
-        "Contribuyente:Ruc o Contribuyente:RazonSocial no configurados correctamente.");
-}
-
-// ATS XML Generator (usa parámetros)
-builder.Services.AddScoped<ATSXmlGenerator>(_ =>
-    new ATSXmlGenerator(ruc, razonSocial)
-);
-
 // Importador de XML
 builder.Services.AddScoped<XmlBatchImporter>();
+
+// Generador ATS
+builder.Services.AddScoped<ATSXmlGenerator>(sp => 
+    new ATSXmlGenerator(ruc!, razonSocial!));
 
 // =====================================================
 // RAZOR PAGES + SESSION + SEGURIDAD
@@ -47,19 +38,21 @@ builder.Services.AddScoped<XmlBatchImporter>();
 builder.Services.AddRazorPages();
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentCompanyService, CurrentCompanyService>();
 
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.IdleTimeout = TimeSpan.FromMinutes(60);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
 builder.Services.AddAntiforgery(options =>
 {
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 // =====================================================
@@ -78,13 +71,38 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// Serve SRI PDFs from external directory
+var sriPdfPath = @"C:\descargasSRI";
+if (Directory.Exists(sriPdfPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(sriPdfPath),
+        RequestPath = "/descargas"
+    });
+}
+
+app.UseSession();
 
 app.UseRouting();
 
+app.UseAntiforgery();
+
 app.UseAuthorization();
-app.UseSession();
+
+// Redirect root to company selection at startup
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path == "/")
+    {
+        context.Response.Redirect("/Empresas/Select?returnUrl=%2FDashboard");
+        return;
+    }
+    await next();
+});
 
 app.MapRazorPages();
 

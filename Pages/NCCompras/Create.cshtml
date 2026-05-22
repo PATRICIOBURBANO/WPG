@@ -1,39 +1,135 @@
-﻿@page
+@page
 @model AtsManager.Pages.NCCompras.CreateModel
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Xsrf
 
-<h2>Nueva Nota de Crédito de Compras</h2>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    .message-box { padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; font-weight: 600; }
+    .success { background-color: #d1fae5; color: #065f46; border-left: 5px solid #10b981; }
+    .error { background-color: #fee2e2; color: #991b1b; border-left: 5px solid #ef4444; }
+</style>
 
-<form method="post">
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">
+        Nueva Nota de Crédito de Compras
+    </h1>
 
-    <label>Clave de Acceso</label>
-    <input asp-for="Registro.ClaveAcceso" class="form-control" />
+    <div asp-validation-summary="ModelOnly" class="text-sm message-box error"></div>
 
-    <label>Fecha Emisión</label>
-    <input asp-for="Registro.FechaEmision" type="date" class="form-control" />
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="message-box success text-sm mb-4">
+            @TempData["MensajeExito"]
+        </div>
+    }
 
-    <label>Fecha Autorización</label>
-    <input asp-for="Registro.FechaAutorizacion" type="datetime-local" class="form-control" />
+    <form method="post" class="space-y-6">
+        @* EMISOR / PROVEEDOR *@
+        <div class="bg-indigo-50 p-6 rounded-lg border border-indigo-200">
+            <h2 class="text-lg font-semibold text-indigo-800 mb-4">Emisor / Proveedor</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label asp-for="Registro.RucEmisor" class="block text-sm font-medium text-gray-700">RUC / Cédula</label>
+                    <input asp-for="Registro.RucEmisor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
+                    <span asp-validation-for="Registro.RucEmisor" class="text-red-500 text-xs"></span>
+                </div>
+                <div class="md:col-span-2">
+                    <label asp-for="Registro.RazonSocialEmisor" class="block text-sm font-medium text-gray-700">Razón Social</label>
+                    <input asp-for="Registro.RazonSocialEmisor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
+                    <span asp-validation-for="Registro.RazonSocialEmisor" class="text-red-500 text-xs"></span>
+                </div>
+            </div>
+        </div>
 
-    <label>Serie</label>
-    <input asp-for="Registro.SerieComprobante" class="form-control" />
+        @* DOCUMENTO *@
+        <div class="bg-gray-50 p-6 rounded-lg">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Documento</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label asp-for="Registro.SerieComprobante" class="block text-sm font-medium text-gray-700">Serie (Estab-PtoEmi-Secuencial)</label>
+                    <input asp-for="Registro.SerieComprobante" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="001-001-000000001" />
+                    <span asp-validation-for="Registro.SerieComprobante" class="text-red-500 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Registro.ClaveAcceso" class="block text-sm font-medium text-gray-700">Clave de Acceso (49 dígitos)</label>
+                    <input asp-for="Registro.ClaveAcceso" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" maxlength="49" />
+                    <span asp-validation-for="Registro.ClaveAcceso" class="text-red-500 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Registro.FechaEmision" class="block text-sm font-medium text-gray-700">Fecha de Emisión</label>
+                    <input asp-for="Registro.FechaEmision" type="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" />
+                    <span asp-validation-for="Registro.FechaEmision" class="text-red-500 text-xs"></span>
+                </div>
+            </div>
+        </div>
 
-    <label>Documento Modificado</label>
-    <input asp-for="Registro.NumeroDocumentoModificado" class="form-control" />
+        @* DOCUMENTO MODIFICADO *@
+        <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h2 class="text-lg font-semibold text-blue-800 mb-4">Documento Modificado (Factura que se modifica)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="Registro.NumeroDocumentoModificado" class="block text-sm font-medium text-gray-700">Número de Documento Modificado</label>
+                    <input asp-for="Registro.NumeroDocumentoModificado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="001-001-000000001" />
+                    <span asp-validation-for="Registro.NumeroDocumentoModificado" class="text-red-500 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Registro.FechaAutorizacion" class="block text-sm font-medium text-gray-700">Fecha de Autorización</label>
+                    <input asp-for="Registro.FechaAutorizacion" type="datetime-local" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" />
+                    <span asp-validation-for="Registro.FechaAutorizacion" class="text-red-500 text-xs"></span>
+                </div>
+            </div>
+        </div>
 
-    <label>RUC Emisor</label>
-    <input asp-for="Registro.RucEmisor" class="form-control" />
+        @* MONTOS *@
+        <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+            <h2 class="text-lg font-semibold text-yellow-800 mb-4">Montos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label asp-for="Registro.ValorSinImpuestos" class="block text-sm font-medium text-gray-700">Base Imponible (sin impuestos)</label>
+                    <input asp-for="Registro.ValorSinImpuestos" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" />
+                    <span asp-validation-for="Registro.ValorSinImpuestos" class="text-red-500 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Registro.IVA" class="block text-sm font-medium text-gray-700">IVA (12%)</label>
+                    <input asp-for="Registro.IVA" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right" />
+                    <span asp-validation-for="Registro.IVA" class="text-red-500 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Registro.Total" class="block text-sm font-medium text-gray-700 font-bold">Total</label>
+                    <input asp-for="Registro.Total" type="number" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-right font-bold" />
+                    <span asp-validation-for="Registro.Total" class="text-red-500 text-xs"></span>
+                </div>
+            </div>
+        </div>
 
-    <label>Razón Social</label>
-    <input asp-for="Registro.RazonSocialEmisor" class="form-control" />
+        @* PERIODO *@
+        <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+            <h2 class="text-lg font-semibold text-green-800 mb-4">Período</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="Registro.Anio" class="block text-sm font-medium text-gray-700">Año</label>
+                    <input asp-for="Registro.Anio" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required />
+                    <span asp-validation-for="Registro.Anio" class="text-red-500 text-xs"></span>
+                </div>
+                <div>
+                    <label asp-for="Registro.Mes" class="block text-sm font-medium text-gray-700">Mes</label>
+                    <input asp-for="Registro.Mes" type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" min="1" max="12" required />
+                    <span asp-validation-for="Registro.Mes" class="text-red-500 text-xs"></span>
+                </div>
+            </div>
+        </div>
 
-    <label>Base sin Impuestos</label>
-    <input asp-for="Registro.ValorSinImpuestos" class="form-control" />
+        @* ACCIONES *@
+        <div class="flex justify-between pt-4 border-t">
+            <a asp-page="./Index" class="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 text-sm">Cancelar</a>
+            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-medium shadow-sm">Guardar Nota de Crédito</button>
+        </div>
+    </form>
+</div>
 
-    <label>IVA</label>
-    <input asp-for="Registro.IVA" class="form-control" />
-
-    <label>Total</label>
-    <input asp-for="Registro.Total" class="form-control" />
-
-    <button type="submit" class="btn btn-primary mt-3">Guardar Nota de Crédito</button>
-</form>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

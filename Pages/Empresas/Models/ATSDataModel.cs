@@ -3,7 +3,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema; // <--- AÑADIR ESTE USING
 
-namespace AtsManager.Models
+namespace AtsManager.Pages.Empresas.Models
 {
     // --- CLASE SOPORTE: CargaLote ---
     public class CargaLote
@@ -172,6 +172,18 @@ namespace AtsManager.Models
         public string TipoComprobante { get; set; } = string.Empty;
         [MaxLength(15)]
         public string NumComprobante { get; set; } = string.Empty;
+
+        // --- DOCUMENTO MODIFICADO (para NC/ND) ---
+        [MaxLength(2)]
+        public string? TipoComprobanteModificado { get; set; }
+        [MaxLength(3)]
+        public string? EstablecimientoModificado { get; set; }
+        [MaxLength(3)]
+        public string? PuntoEmisionModificado { get; set; }
+        [MaxLength(9)]
+        public string? SecuencialModificado { get; set; }
+        [MaxLength(49)]
+        public string? AutorizacionModificada { get; set; }
 
         // --- BASES IMPONIBLES (Corregidas a anulables) ---
         public decimal? BaseImponible { get; set; }

@@ -9,50 +9,123 @@
 
     <form method="get" class="mb-4 bg-white p-4 rounded-lg shadow space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-xs font-medium text-gray-700">Empresa</label>
-                <select asp-for="RucEmpresa" class="w-full rounded border-gray-300 text-sm">
-                    <option value="">Seleccione empresa...</option>
-                    @foreach (var emp in Model.Empresas)
-                    {
-                        <option value="@emp.Ruc">@emp.Ruc - @emp.RazonSocial</option>
-                    }
-                </select>
+            <div class="flex items-center bg-gray-100 rounded px-3 py-2">
+                <span class="text-xs font-medium text-gray-500 mr-2">Empresa:</span>
+                <span class="text-sm font-bold text-gray-800">@ViewData["EmpresaNombre"]</span>
             </div>
+            <input type="hidden" name="rucEmpresa" value="@Model.RucEmpresa" />
             <div>
                 <label class="block text-xs font-medium text-gray-700">Año</label>
-                <select asp-for="Anio" class="w-full rounded border-gray-300 text-sm">
+                <select asp-for="Anio" class="w-full rounded border-gray-300 text-sm" onchange="this.form.submit()">
                     @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 5; y--)
                     {
-                        <option value="@y">@y</option>
+                        <option value="@y" selected="@(y == Model.Anio)">@y</option>
                     }
                 </select>
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700">Mes</label>
-                <select asp-for="Mes" class="w-full rounded border-gray-300 text-sm">
+                <select asp-for="Mes" class="w-full rounded border-gray-300 text-sm" onchange="this.form.submit()">
+                    <option value="0">Todos</option>
                     @for (int m = 1; m <= 12; m++)
                     {
-                        <option value="@m">@m.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)</option>
+                        <option value="@m" selected="@(m == Model.Mes)">@m.ToString("00") - @CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)</option>
                     }
                 </select>
             </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700">Actualizar</button>
+            </div>
         </div>
 
-        <div class="flex flex-wrap gap-3">
-            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700">Consultar</button>
-            <button type="submit" name="Contexto" value="RECIBIDOS" class="bg-slate-100 px-3 py-2 rounded text-sm">Recibidos</button>
-            <button type="submit" name="Contexto" value="EMITIDOS" class="bg-slate-100 px-3 py-2 rounded text-sm">Emitidos</button>
-            <button type="submit" name="TipoDocumento" value="FACTURA" class="bg-slate-100 px-3 py-2 rounded text-sm">Factura</button>
-            <button type="submit" name="TipoDocumento" value="NOTA_CREDITO" class="bg-slate-100 px-3 py-2 rounded text-sm">NC</button>
-            <button type="submit" name="TipoDocumento" value="NOTA_DEBITO" class="bg-slate-100 px-3 py-2 rounded text-sm">ND</button>
-            <button type="submit" name="TipoDocumento" value="RETENCION" class="bg-slate-100 px-3 py-2 rounded text-sm">Retención</button>
+        <!-- Toggle Recibidos / Emitidos -->
+        <div class="flex flex-wrap gap-2">
+            <button type="submit" name="Contexto" value="RECIBIDOS" 
+                class="px-4 py-2 rounded text-sm font-medium transition-colors @(Model.Contexto == "RECIBIDOS" ? "bg-indigo-600 text-white" : "bg-slate-200 text-gray-700 hover:bg-slate-300")">
+                <i class="fas fa-arrow-left mr-1"></i> Recibidos
+            </button>
+            <button type="submit" name="Contexto" value="EMITIDOS" 
+                class="px-4 py-2 rounded text-sm font-medium transition-colors @(Model.Contexto == "EMITIDOS" ? "bg-indigo-600 text-white" : "bg-slate-200 text-gray-700 hover:bg-slate-300")">
+                <i class="fas fa-arrow-right mr-1"></i> Emitidos
+            </button>
+        </div>
+
+        <!-- Filtros de Tipo de Documento -->
+        <div class="flex flex-wrap gap-2">
+            <button type="submit" name="TipoDocumento" value="" 
+                class="px-3 py-1.5 rounded text-xs font-medium transition-colors @(string.IsNullOrEmpty(Model.TipoDocumento) ? "bg-green-600 text-white" : "bg-slate-100 text-gray-600 hover:bg-slate-200")">
+                Todos
+            </button>
+            <button type="submit" name="TipoDocumento" value="FACTURA" 
+                class="px-3 py-1.5 rounded text-xs font-medium transition-colors @(Model.TipoDocumento == "FACTURA" ? "bg-green-600 text-white" : "bg-slate-100 text-gray-600 hover:bg-slate-200")">
+                Factura
+            </button>
+            <button type="submit" name="TipoDocumento" value="NOTA_CREDITO" 
+                class="px-3 py-1.5 rounded text-xs font-medium transition-colors @(Model.TipoDocumento == "NOTA_CREDITO" ? "bg-green-600 text-white" : "bg-slate-100 text-gray-600 hover:bg-slate-200")">
+                Nota Crédito
+            </button>
+            <button type="submit" name="TipoDocumento" value="NOTA_DEBITO" 
+                class="px-3 py-1.5 rounded text-xs font-medium transition-colors @(Model.TipoDocumento == "NOTA_DEBITO" ? "bg-green-600 text-white" : "bg-slate-100 text-gray-600 hover:bg-slate-200")">
+                Nota Débito
+            </button>
+            <button type="submit" name="TipoDocumento" value="RETENCION" 
+                class="px-3 py-1.5 rounded text-xs font-medium transition-colors @(Model.TipoDocumento == "RETENCION" ? "bg-green-600 text-white" : "bg-slate-100 text-gray-600 hover:bg-slate-200")">
+                Retención
+            </button>
+            @if (Model.Contexto == "EMITIDOS")
+            {
+                <button type="submit" name="TipoDocumento" value="RETENCION_EMITIDA" 
+                    class="px-3 py-1.5 rounded text-xs font-medium transition-colors @(Model.TipoDocumento == "RETENCION_EMITIDA" ? "bg-green-600 text-white" : "bg-slate-100 text-gray-600 hover:bg-slate-200")">
+                    Retención Emitida
+                </button>
+            }
         </div>
     </form>
 
     @if (!string.IsNullOrWhiteSpace(Model.Mensaje))
     {
         <div class="mb-4 rounded-lg bg-yellow-50 p-4 text-yellow-800">@Model.Mensaje</div>
+    }
+
+    @* Historial de Lotes de Compras *@
+    @if (Model.Lotes.Any())
+    {
+        <div class="mb-6 bg-white rounded-lg shadow p-4">
+            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                <i class="fas fa-history mr-2 text-indigo-500"></i>Historial de Cargas de Compras
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Período</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Registros</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha Carga</th>
+                            <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach (var lote in Model.Lotes)
+                        {
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-900">@lote.Anio/@lote.Mes.ToString("00")</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-500">@lote.TipoArchivo</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-500">@lote.TotalRegistros</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-500">@lote.FechaCarga.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-right">
+                                    <form method="post" asp-page="/Cargas" asp-page-handler="DeleteLote" asp-route-id="@lote.Id" style="display:inline;" onsubmit="return confirm('¿Eliminar esta carga?');">
+                                        <button type="submit" class="text-red-600 hover:text-red-800 font-medium text-xs">
+                                            <i class="fas fa-trash mr-1"></i>Eliminar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
     }
 
     @if (Model.Filas.Any())
@@ -66,21 +139,22 @@
             <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">Exportar Excel</button>
         </form>
 
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+        <div class="report-card">
+            <div class="overflow-x-auto" style="max-height: 500px; overflow-y: auto;">
+                <table class="report-table min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">RUC</th>
-                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base 0%</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base Grav.</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">IVA</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase">Retención</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doc. Afectado</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RUC</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                            <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Base 0%</th>
+                            <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Base Grav.</th>
+                            <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">IVA</th>
+                            <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                            <th class="px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Retención</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white">
@@ -92,13 +166,14 @@
                                 <td class="px-2 py-2 text-xs">
                                     @if (!string.IsNullOrEmpty(fila.LinkPdf))
                                     {
-                                        <a href="/Reportes/Index?handler=VerPdf&ruta=@Uri.EscapeDataString(fila.LinkPdf)" target="_blank" class="text-indigo-600 hover:text-indigo-900 font-medium" title="Ver PDF">@fila.Numero</a>
+                                        <a href="@fila.LinkPdf" target="_blank" class="text-indigo-600 hover:text-indigo-900 font-medium" title="Ver PDF">@fila.Numero</a>
                                     }
                                     else
                                     {
                                         @fila.Numero
                                     }
                                 </td>
+                                <td class="px-2 py-2 text-xs">@fila.DocAfectado</td>
                                 <td class="px-2 py-2 text-xs">@fila.RucRelacionado</td>
                                 <td class="px-2 py-2 text-xs">@fila.NombreRelacionado</td>
                                 <td class="px-2 py-2 text-right text-xs">@fila.Base0.ToString("N2")</td>
@@ -109,9 +184,9 @@
                             </tr>
                         }
                     </tbody>
-                    <tfoot class="bg-gray-100 font-bold">
+                    <tfoot class="bg-gray-100 font-bold sticky bottom-0 z-10">
                         <tr>
-                            <td colspan="5" class="px-2 py-2 text-right text-xs">TOTALES</td>
+                            <td colspan="6" class="px-2 py-2 text-right text-xs">TOTALES</td>
                             <td class="px-2 py-2 text-right text-xs">@Model.TotalBase0.ToString("N2")</td>
                             <td class="px-2 py-2 text-right text-xs">@Model.TotalBaseGrav.ToString("N2")</td>
                             <td class="px-2 py-2 text-right text-xs">@Model.TotalIva.ToString("N2")</td>
@@ -122,5 +197,13 @@
                 </table>
             </div>
         </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.RucEmpresa))
+    {
+        <div class="bg-yellow-50 p-4 rounded-lg text-yellow-800">No se encontraron registros para los filtros seleccionados.</div>
+    }
+    else
+    {
+        <div class="bg-blue-50 p-4 rounded-lg text-blue-800">Seleccione una empresa para ver los reportes.</div>
     }
 </div>

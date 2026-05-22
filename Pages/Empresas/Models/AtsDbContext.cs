@@ -1,7 +1,8 @@
-﻿using AtsManager.Pages.NCCompras;
+﻿using AtsManager.Models;
+using AtsManager.Pages.NCCompras;
 using Microsoft.EntityFrameworkCore;
 
-namespace AtsManager.Models
+namespace AtsManager.Pages.Empresas.Models
 {
     public class AtsDbContext : DbContext
     {
@@ -15,6 +16,28 @@ namespace AtsManager.Models
         public DbSet<RetencionCliente> RetencionesClientes { get; set; }
         public DbSet<RetencionCompra> RetencionesCompras { get; set; }
         public DbSet<Empresa> Empresas { get; set; }
+
+        public DbSet<SriRawFile> SriRawFiles { get; set; }
+        public DbSet<SriXmlPayload> SriXmlPayloads { get; set; }
+        public DbSet<SriDocumento> SriDocumentos { get; set; }
+        public DbSet<SriDocumentoRetencionRenta> SriDocRetencionesRenta { get; set; }
+        public DbSet<SriDocumentoRetencionIva> SriDocRetencionesIva { get; set; }
+        public DbSet<SriDocumentoFormaPago> SriDocFormasPago { get; set; }
+        public DbSet<SriDocumentoModificado> SriDocModificados { get; set; }
+        public DbSet<SriDocumentoReembolso> SriDocReembolsos { get; set; }
+        public DbSet<SriComprobanteRetencionEmitido> SriCompRetencionesEmitidos { get; set; }
+        public DbSet<SriDocumentoAnulado> SriDocumentosAnulados { get; set; }
+
+        public DbSet<CatTipoComprobante> CatTiposComprobante { get; set; }
+        public DbSet<CatTipoIdentificacion> CatTiposIdentificacion { get; set; }
+        public DbSet<CatSustento> CatSustentos { get; set; }
+        public DbSet<CatFormaPago> CatFormasPago { get; set; }
+        public DbSet<CatAir> CatAires { get; set; }
+        public DbSet<CatTipoRegimenExterior> CatTiposRegimenExterior { get; set; }
+        public DbSet<CatPais> CatPaises { get; set; }
+        public DbSet<CatTipoProveedorCliente> CatTiposProveedorCliente { get; set; }
+        public DbSet<CatTipoEmision> CatTiposEmision { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // --- CargasLotes: Ventas ---
@@ -135,6 +158,18 @@ namespace AtsManager.Models
             modelBuilder.Entity<Venta>()
                 .Property(v => v.FechaRetencion).HasColumnType("date").IsRequired(false);
 
+            // --- DocModificado para Ventas (NC) ---
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.TipoComprobanteModificado).HasMaxLength(2).IsRequired(false);
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.EstablecimientoModificado).HasMaxLength(3).IsRequired(false);
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.PuntoEmisionModificado).HasMaxLength(3).IsRequired(false);
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.SecuencialModificado).HasMaxLength(9).IsRequired(false);
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.AutorizacionModificada).HasMaxLength(49).IsRequired(false);
+
             // --- Retenciones Compras ---
             modelBuilder.Entity<RetencionCompra>()
                 .Property(r => r.BaseImpGrav).HasColumnType("decimal(18, 2)");
@@ -204,6 +239,118 @@ namespace AtsManager.Models
                 .Property(r => r.ValRetRenta).HasColumnType("decimal(18, 2)");
             modelBuilder.Entity<RetencionCliente>()
                 .Property(r => r.TotalRetencion).HasColumnType("decimal(18, 2)");
+
+            // --- Configuración de nuevas entidades Sri ---
+
+            // SriDocumento - relaciones
+            modelBuilder.Entity<SriDocumento>()
+                .HasOne(d => d.Empresa)
+                .WithMany()
+                .HasForeignKey(d => d.EmpresaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SriDocumento>()
+                .HasOne(d => d.DocumentoModificado)
+                .WithOne(dm => dm.Documento)
+                .HasForeignKey<SriDocumentoModificado>(dm => dm.DocumentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SriDocumento>()
+                .HasOne(d => d.Reembolso)
+                .WithOne(r => r.Documento)
+                .HasForeignKey<SriDocumentoReembolso>(r => r.DocumentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // SriDocumentoRetencionRenta
+            modelBuilder.Entity<SriDocumentoRetencionRenta>()
+                .HasOne(r => r.Documento)
+                .WithMany(d => d.RetencionesRenta)
+                .HasForeignKey(r => r.DocumentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // SriDocumentoRetencionIva
+            modelBuilder.Entity<SriDocumentoRetencionIva>()
+                .HasOne(r => r.Documento)
+                .WithMany(d => d.RetencionesIva)
+                .HasForeignKey(r => r.DocumentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // SriDocumentoFormaPago
+            modelBuilder.Entity<SriDocumentoFormaPago>()
+                .HasOne(f => f.Documento)
+                .WithMany(d => d.FormasPago)
+                .HasForeignKey(f => f.DocumentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // SriDocumentoModificado
+            modelBuilder.Entity<SriDocumentoModificado>()
+                .HasOne(dm => dm.DocumentoRelacionado)
+                .WithMany()
+                .HasForeignKey(dm => dm.DocumentoRelacionadoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // SriDocumentoReembolso
+            modelBuilder.Entity<SriDocumentoReembolso>()
+                .Property(r => r.BaseImponibleReemb).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<SriDocumentoReembolso>()
+                .Property(r => r.BaseImpGravReemb).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<SriDocumentoReembolso>()
+                .Property(r => r.BaseNoGraIvaReemb).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<SriDocumentoReembolso>()
+                .Property(r => r.BaseImpExeReemb).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<SriDocumentoReembolso>()
+                .Property(r => r.TotBasesImpReemb).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<SriDocumentoReembolso>()
+                .Property(r => r.MontoIceReemb).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<SriDocumentoReembolso>()
+                .Property(r => r.MontoIvaReemb).HasColumnType("decimal(18, 2)");
+
+            // SriComprobanteRetencionEmitido
+            modelBuilder.Entity<SriComprobanteRetencionEmitido>()
+                .HasOne(r => r.Documento)
+                .WithMany()
+                .HasForeignKey(r => r.DocumentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // SriDocumentoAnulado
+            modelBuilder.Entity<SriDocumentoAnulado>()
+                .HasOne(d => d.Empresa)
+                .WithMany()
+                .HasForeignKey(d => d.EmpresaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // SriRawFile
+            modelBuilder.Entity<SriRawFile>()
+                .HasOne(r => r.Empresa)
+                .WithMany()
+                .HasForeignKey(r => r.EmpresaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SriRawFile>()
+                .HasOne(r => r.XmlPayload)
+                .WithOne(x => x.RawFile)
+                .HasForeignKey<SriXmlPayload>(x => x.RawFileId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Catálogos
+            modelBuilder.Entity<CatTipoComprobante>()
+                .HasIndex(c => c.Codigo).IsUnique();
+            modelBuilder.Entity<CatTipoIdentificacion>()
+                .HasIndex(c => c.Codigo).IsUnique();
+            modelBuilder.Entity<CatSustento>()
+                .HasIndex(c => c.Codigo).IsUnique();
+            modelBuilder.Entity<CatFormaPago>()
+                .HasIndex(c => c.Codigo).IsUnique();
+            modelBuilder.Entity<CatAir>()
+                .HasIndex(c => c.Codigo).IsUnique();
+            modelBuilder.Entity<CatTipoRegimenExterior>()
+                .HasIndex(c => c.Codigo).IsUnique();
+            modelBuilder.Entity<CatPais>()
+                .HasIndex(c => c.Codigo).IsUnique();
+            modelBuilder.Entity<CatTipoProveedorCliente>()
+                .HasIndex(c => c.Codigo).IsUnique();
+            modelBuilder.Entity<CatTipoEmision>()
+                .HasIndex(c => c.Codigo).IsUnique();
         }
     }
 }

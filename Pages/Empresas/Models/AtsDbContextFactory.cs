@@ -4,9 +4,8 @@ using Microsoft.Extensions.Configuration;
 using System.IO;
 
 // Asegúrate de que este using esté incluido
-using AtsManager.Models;
 
-namespace AtsManager.Models
+namespace AtsManager.Pages.Empresas.Models
 {
     // Esta clase le indica a las herramientas de migración de EF Core 
     // dónde encontrar la cadena de conexión en tiempo de diseño.
